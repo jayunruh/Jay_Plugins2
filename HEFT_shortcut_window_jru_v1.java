@@ -15,9 +15,13 @@ import jguis.*;
 public class HEFT_shortcut_window_jru_v1 implements PlugIn {
 
 	public void run(String arg) {
-		handleextrafiletypes_importer heft=new handleextrafiletypes_importer();
+		handleextrafiletypes_importer2 heft=new handleextrafiletypes_importer2();
 		heft.init();
-		handleextrafiletypes_importer.launch_frame(heft);
+		GenericDialog gd=new GenericDialog("Options");
+		gd.addCheckbox("Use Custom LOCI Importer",false);
+		gd.showDialog(); if(gd.wasCanceled()) return;
+		heft.usecustomloci=gd.getNextBoolean();
+		handleextrafiletypes_importer2.launch_frame(heft);
 	}
 
 }

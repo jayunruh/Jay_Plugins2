@@ -15,75 +15,33 @@ import jalgs.jfit.*;
 import jguis.*;
 import ij.text.*;
 
-public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface{
-	boolean checkc2;
-	float[] tempx,tempdata;
-	float c2;
-	int iterations,series;
-	NLLSfit fitclass;
+public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
+	float[] tempx;
 	String[] paramnames={"baseline","xc1","stdev1","amp1"};
-	PlotWindow4 pw;
+	gausfunc gf;
 
 	public void run(String arg) {
 		ImageWindow iw=WindowManager.getCurrentWindow();
-		pw=jutils.getPW4SelCopy(iw);
+		PlotWindow4 pw=jutils.getPW4SelCopy(iw);
 		String title=pw.getTitle();
 		float[][] yvals=pw.getYValues();
 		float[][] xvals=pw.getXValues();
 		int length=yvals[0].length;
 		int[] colors=pw.getColors();
 		colors[0]=0;
-		float min=yvals[0][0];
-		int maxloc=0;
-		float max=yvals[0][0];
-		for(int i=1;i<length;i++){
-			if(yvals[0][i]<min){min=yvals[0][i];}
-			if(yvals[0][i]>max){max=yvals[0][i]; maxloc=i;}
-		}
-		float halfmax=(max+min)/2.0f;
-		float fwhm=0.0f;
-		for(int i=(maxloc+1);i<length;i++){
-			if(yvals[0][i]<halfmax){
-				fwhm+=0.5f*(xvals[0][i]-xvals[0][maxloc]);
-				break;
-			}
-			if(i==(length-1)){
-				fwhm+=0.5f*(xvals[0][i]-xvals[0][maxloc]);
-			}
-		}
-		for(int i=(maxloc-1);i>=0;i--){
-			if(yvals[0][i]<halfmax){
-				fwhm+=0.5f*(xvals[0][maxloc]-xvals[0][i]);
-				break;
-			}
-			if(i==0){
-				fwhm+=0.5f*(xvals[0][maxloc]-xvals[0][i]);
-			}
-		}
 
 		//parameters are baseline,xc1,stdev1,amp1
-		double[] params={(double)min,(double)xvals[0][maxloc],(double)fwhm/2.35,(double)max};
+		double[] params=guessParams(xvals[0],yvals[0],length);
 		int[] fixes={0,0,0,0};
-		c2=0.0f;
-		iterations=0;
-		checkc2=false;
+		double c2=0.0f;
+		int iterations=0;
 
 		double[] stats=new double[2];
-		double[][] constraints=new double[2][13];
-		constraints[0][0]=-0.5*(double)max; constraints[1][0]=(double)max;
-		constraints[0][1]=(double)xvals[0][0]; constraints[1][1]=(double)xvals[0][length-1];
-		constraints[0][2]=0.1*(double)(xvals[0][1]-xvals[0][0]); constraints[1][2]=(double)(xvals[0][length-1]-xvals[0][0]);
-		constraints[0][3]=0.0; constraints[1][3]=10.0*(float)max;
+		double[][] constraints=getConstraints(xvals[0],params);
 
 		pw.addPoints(xvals[0],new float[length],false);
-		series=pw.getNpts().length-1;
-
-		tempx=new float[length];
-		System.arraycopy(xvals[0],0,tempx,0,length);
-		tempdata=new float[length];
-		System.arraycopy(yvals[0],0,tempdata,0,length);
-		fitclass=new NLLSfit(this,0.0001,50,0.1);
-		float[] fit=fitclass.fitdata(params,fixes,constraints,tempdata,null,stats,false);
+		int series=pw.getNpts().length-1;
+		float[] fit=runFit(xvals[0],yvals[0],params,stats,constraints,fixes);
 		pw.updateSeries(fit,series,false);
 		c2=(float)stats[1];
 		iterations=(int)stats[0];
@@ -102,7 +60,59 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface{
 		outtable.append(sb.toString());
 	}
 
-	public double fitfunc(double[] params,int indvar){
+	public float[] runFit(float[] xvals,float[] yvals,double[] params,double[] stats,double[][] constraints,int[] fixes){
+		tempx=new float[xvals.length];
+		System.arraycopy(xvals,0,tempx,0,xvals.length);
+		gf=new gausfunc();
+		NLLSfit_v2 fitclass=new NLLSfit_v2(this,0.0001,50,0.1);
+		float[] fit=fitclass.fitdata(params,fixes,constraints,yvals,null,stats,false);
+		return fit;
+	}
+
+	public double[][] getConstraints(float[] xvals,double[] params){
+		double[][] constraints=new double[2][4];
+		constraints[0][0]=params[0]-0.5*params[3]; constraints[1][0]=params[3]+params[0];
+		constraints[0][1]=(double)xvals[0]; constraints[1][1]=(double)xvals[xvals.length-1];
+		constraints[0][2]=0.1*(double)(xvals[1]-xvals[0]); constraints[1][2]=(double)(xvals[xvals.length-1]-xvals[0]);
+		constraints[0][3]=0.0; constraints[1][3]=10.0*params[3];
+		return constraints;
+	}
+
+	public double[] guessParams(float[] xvals,float[] yvals,int length){
+		float min=yvals[0];
+		int maxloc=0;
+		float max=yvals[0];
+		for(int i=1;i<length;i++){
+			if(yvals[i]<min){min=yvals[i];}
+			if(yvals[i]>max){max=yvals[i]; maxloc=i;}
+		}
+		float halfmax=(max+min)/2.0f;
+		float fwhm=0.0f;
+		for(int i=(maxloc+1);i<length;i++){
+			if(yvals[i]<halfmax){
+				fwhm+=0.5f*(xvals[i]-xvals[maxloc]);
+				break;
+			}
+			if(i==(length-1)){
+				fwhm+=0.5f*(xvals[i]-xvals[maxloc]);
+			}
+		}
+		for(int i=(maxloc-1);i>=0;i--){
+			if(yvals[i]<halfmax){
+				fwhm+=0.5f*(xvals[maxloc]-xvals[i]);
+				break;
+			}
+			if(i==0){
+				fwhm+=0.5f*(xvals[maxloc]-xvals[i]);
+			}
+		}
+
+		//parameters are baseline,xc1,stdev1,amp1
+		double[] params={(double)min,(double)xvals[maxloc],(double)fwhm/2.35,(double)(max-min)};
+		return params;
+	}
+
+	/*public double fitfunc(double[] params,int indvar){
 		//parameters are baseline,xc1,stdev1,amp1
 		double retval=params[0];
 		for(int i=0;i<1;i++){
@@ -112,6 +122,15 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface{
 			}
 		}
 		return retval;
+	}*/
+
+	public double[] fitfunc(double[] params){
+		//parameters are baseline,xc1,stdev1,amp1
+		double[] func=new double[tempx.length];
+		for(int i=0;i<tempx.length;i++){
+			func[i]=params[0]+params[3]*gf.getinterpgaus(Math.abs(tempx[i]-params[1]),params[2]);
+		}
+		return func;
 	}
 
 	public void showresults(String results){

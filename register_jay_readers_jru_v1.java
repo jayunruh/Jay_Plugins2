@@ -18,9 +18,13 @@ public class register_jay_readers_jru_v1 implements PlugIn {
 		try{
 			Class jayreader=Class.forName("loci_pw_reader_jru_v1");
 			ImageReader.getDefaultReaderClasses().addClass(jayreader);
+			//Class jayreader2=Class.forName("loci_sky_reader_jru_v1");
+			//ImageReader.getDefaultReaderClasses().addClass(jayreader2);
+			Class jayreader3=Class.forName("loci_kiss_reader_jru_v1");
+			ImageReader.getDefaultReaderClasses().addClass(jayreader3);
 		} catch(ClassNotFoundException e){
 			//if the reader isn't intalled, don't bother
-			IJ.log("loci pw reader wasn't found");
+			IJ.log("loci pw or kiss reader wasn't found");
 			return;
 		}
 	}

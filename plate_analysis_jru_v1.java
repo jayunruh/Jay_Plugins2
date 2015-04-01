@@ -31,6 +31,7 @@ public class plate_analysis_jru_v1 implements PlugIn {
 		gd.addNumericField("#_y_replicates",avgy,0);
 		gd.addCheckbox("Circ_Background",false);
 		gd.addCheckbox("Show_Rois",false);
+		gd.addCheckbox("Output_2D_Plot",false);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		totpts=(int)gd.getNextNumber();
 		xyratio=gd.getNextNumber();
@@ -39,6 +40,7 @@ public class plate_analysis_jru_v1 implements PlugIn {
 		avgy=(int)gd.getNextNumber();
 		boolean circsub=gd.getNextBoolean();
 		boolean showrois=gd.getNextBoolean();
+		boolean outplot=gd.getNextBoolean();
 		ImagePlus imp=WindowManager.getCurrentImage();
 		int width=imp.getWidth(); int height=imp.getHeight();
 		int intrad=1+(int)Math.ceil(radius);
@@ -81,9 +83,6 @@ public class plate_analysis_jru_v1 implements PlugIn {
 		//applications that do not support this should use advanced background
 		//subtraction tools to make the background uniform
 		float[] pixels=(float[])imp.getProcessor().convertToFloat().getPixels();
-		//float background=jstatistics.getstatistic("Min",pixels,width,height,poly,null);
-		float background=jstatistics.getstatistic("Percentile",pixels,width,height,poly,new float[]{5.0f});
-		if(showrois) IJ.log("background = "+background);
 
 		boolean[] mask=new boolean[2*intrad*2*intrad];
 		boolean[] circ=new boolean[2*intrad*2*intrad];
@@ -108,6 +107,10 @@ public class plate_analysis_jru_v1 implements PlugIn {
 		}
 		
 		if(showrois) IJ.log("spot area (pix) = "+area);
+
+		//float background=jstatistics.getstatistic("Min",pixels,width,height,poly,null);
+		/*float background=jstatistics.getstatistic("Percentile",pixels,width,height,poly,new float[]{5.0f});
+		if(showrois) IJ.log("overall background = "+background);
 		float[] stats=new float[totpts];
 		float[] circstats=new float[totpts];
 		for(int i=0;i<totpts;i++){
@@ -144,9 +147,71 @@ public class plate_analysis_jru_v1 implements PlugIn {
 				xcounter++;
 			}
 			ycounter++;
-		}
+		}*/
+		float[][][] stats2=analyzePlate(pixels,width,height,poly,intrad,mask,circ,area,circarea,wells,xpts,ypts,avgx,avgy,circsub,showrois);
+		int newxpts=(int)((float)xpts/(float)avgx);
+		int newypts=(int)((float)ypts/(float)avgy);
 		TextWindow tw=new TextWindow("Plate Densities",table_tools.createcollabels(newxpts),table_tools.print_float_array(stats2[0]),400,200);
 		TextWindow tw2=new TextWindow("Plate Errors",table_tools.createcollabels(newxpts),table_tools.print_float_array(stats2[1]),400,200);
+		if(outplot){
+			float[] newstats=new float[stats2[0].length*stats2[0][0].length];
+			float[] errors=newstats.clone();
+			int counter10=0;
+			for(int i=0;i<stats2[0].length;i++){
+				for(int j=0;j<stats2[0][0].length;j++){
+					newstats[counter10]=stats2[0][i][j];
+					errors[counter10]=stats2[1][i][j];
+					counter10++;
+				}
+			}
+			PlotWindow4 pw=new PlotWindow4("2D Plate Intensities","group","Intensity",newstats);
+			pw.addErrorBars(errors);
+			pw.draw();
+		}
+	}
+
+	public float[][][] analyzePlate(float[] pixels,int width,int height,Polygon boundary,int intrad,boolean[] mask,boolean[] circ,int area,int circarea,int[][] wells,int xpts,int ypts,int avgx,int avgy,boolean circsub,boolean showrois){
+		int totpts=xpts*ypts;
+		float[] stats=new float[totpts];
+		float[] circstats=new float[totpts];
+		float background=jstatistics.getstatistic("Percentile",pixels,width,height,boundary,new float[]{5.0f});
+		if(showrois) IJ.log("overall background = "+background);
+		for(int i=0;i<totpts;i++){
+			int counter2=0;
+			for(int j=0;j<2*intrad;j++){
+				int ypos=wells[1][i]-intrad+j;
+				for(int k=0;k<2*intrad;k++){
+					int xpos=wells[0][i]-intrad+k;
+					if(mask[counter2]) stats[i]+=(pixels[xpos+ypos*width]-background);
+					if(circ[counter2]) circstats[i]+=(pixels[xpos+ypos*width]-background);
+					counter2++;
+				}
+			}
+			if(circsub){
+				float avgback=circstats[i]/(float)circarea;
+				stats[i]-=avgback*(float)area;
+			}
+		}
+		int newxpts=(int)((float)xpts/(float)avgx);
+		int newypts=(int)((float)ypts/(float)avgy);
+		float[][][] stats2=new float[2][newypts][newxpts];
+		int ycounter=0;
+		for(int i=0;i<ypts;i+=avgy){
+			int xcounter=0;
+			for(int j=0;j<xpts;j+=avgx){
+				float[] subarray=new float[avgx*avgy];
+				for(int k=0;k<avgy;k++){
+					for(int l=0;l<avgx;l++){
+						subarray[l+k*avgx]=stats[(i+k)*xpts+j+l];
+					}
+				}
+				stats2[0][ycounter][xcounter]=jstatistics.getstatistic("Avg",subarray,null);
+				stats2[1][ycounter][xcounter]=jstatistics.getstatistic("StErr",subarray,null);
+				xcounter++;
+			}
+			ycounter++;
+		}
+		return stats2;
 	}
 
 }

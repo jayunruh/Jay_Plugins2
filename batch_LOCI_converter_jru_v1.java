@@ -32,8 +32,10 @@ public class batch_LOCI_converter_jru_v1 implements PlugIn {
 		String[] names=lfr.getSeriesNames(directory,fname);
 		GenericDialog gd=new GenericDialog("Options");
 		int minsize=5;
+		int maxsize=1000000;
 		int binz=1;
 		gd.addNumericField("Min_stack_size (all frames)",minsize,0);
+		gd.addNumericField("Max_stack_size (all frames)",maxsize,0);
 		gd.addNumericField("Z_bin_size",binz,0);
 		gd.addCheckbox("Max_Z_Project?",true);
 		gd.addCheckbox("Different_Output_Directory?",false);
@@ -41,6 +43,7 @@ public class batch_LOCI_converter_jru_v1 implements PlugIn {
 		gd.addNumericField("Channel_To_Convert",1,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		minsize=(int)gd.getNextNumber();
+		maxsize=(int)gd.getNextNumber();
 		binz=(int)gd.getNextNumber();
 		boolean zproj=gd.getNextBoolean();
 		boolean diffout=gd.getNextBoolean();
@@ -53,11 +56,14 @@ public class batch_LOCI_converter_jru_v1 implements PlugIn {
 			if(outdir==null) return;
 		}
 		for(int i=0;i<nseries;i++){
-			ImagePlus imp=lfr.get_loci_imp(directory,fname,false,i);
-			if(imp!=null){
-				ImageStack stack=imp.getStack();
-				int width=imp.getWidth(); int height=imp.getHeight();
-				if(stack.getSize()>minsize){
+			int[] sizes=lfr.get_imp_sizes(directory,fname,i);
+			int totsize=sizes[2]*sizes[3]*sizes[4];
+			IJ.log("series = "+i+", size = "+totsize);
+			if(totsize>minsize && totsize<=maxsize){
+				ImagePlus imp=lfr.get_loci_imp(directory,fname,false,i);
+				if(imp!=null){
+					ImageStack stack=imp.getStack();
+					int width=imp.getWidth(); int height=imp.getHeight();
 					int frames=imp.getNFrames();
 					int slices=imp.getNSlices();
 					int channels=imp.getNChannels();

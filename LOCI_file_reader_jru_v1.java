@@ -25,8 +25,10 @@ public class LOCI_file_reader_jru_v1 implements PlugIn {
 		int nseries=(new LOCI_file_reader()).getNSeries(directory,fname);
 		GenericDialog gd2=new GenericDialog("Options");
 		gd2.addCheckbox("Avoid_Metadata",false);
+		gd2.addCheckbox("Simple_Import",false);
 		gd2.showDialog(); if(gd2.wasCanceled()){return;}
 		boolean nometa=gd2.getNextBoolean();
+		boolean simple=gd2.getNextBoolean();
 		LOCI_file_reader lfr=new LOCI_file_reader();
 		lfr.nometa=nometa;
 		GenericDialog gd=new GenericDialog("Options");
@@ -41,13 +43,17 @@ public class LOCI_file_reader_jru_v1 implements PlugIn {
 		}
 		gd.addCheckbox("Z_Project?",false);
 		gd.addChoice("Proj_Stat",jstatistics.stats,jstatistics.stats[0]);
+		gd.addNumericField("Ref_Chan (0 if none)",0,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		boolean outmeta=gd.getNextBoolean();
 		int series=0;
 		if(nseries>1) series=gd.getNextChoiceIndex();
 		boolean zproj=gd.getNextBoolean();
+		int refchan=(int)gd.getNextNumber()-1;
 		String projstat=jstatistics.stats[gd.getNextChoiceIndex()];
-		ImagePlus imp=lfr.get_loci_imp(directory,fname,outmeta,series,zproj,projstat);
+		ImagePlus imp=null;
+		if(!simple) imp=lfr.get_loci_imp(directory,fname,outmeta,series,zproj,projstat,refchan);
+		else imp=lfr.get_loci_imp_simple(directory,fname,series);
 		//ImagePlus imp=(new LOCI_file_reader()).get_loci_imp(directory,fname,outmeta,series);
 		imp.show();
 	}

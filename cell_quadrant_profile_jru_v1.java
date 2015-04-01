@@ -78,8 +78,18 @@ public class cell_quadrant_profile_jru_v1 implements PlugIn {
 				}
 			}
 		}
-		//IJ.log(""+counts[0]+" , "+counts[1]+" , "+counts[2]+" , "+counts[3]);
-		new PlotWindow4("Cell Quadrant Profiles","frame","intensity",profiles,null).draw();
+		if(slices==1){
+			float[] profiles2=new float[ndiv];
+			float[] angles=new float[ndiv];
+			for(int i=0;i<ndiv;i++){
+				profiles2[i]=profiles[i][0];
+				angles[i]=360.0f*(float)i/(float)ndiv;
+			}
+			new PlotWindow4("Cell Quadrant Profile","angle","sum intensity",angles,profiles2).draw();
+		} else {
+			//IJ.log(""+counts[0]+" , "+counts[1]+" , "+counts[2]+" , "+counts[3]);
+			new PlotWindow4("Cell Quadrant Profiles","frame","sum intensity",profiles,null).draw();
+		}
 	}
 
 }

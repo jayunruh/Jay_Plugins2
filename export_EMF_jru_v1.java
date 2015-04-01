@@ -24,10 +24,12 @@ public class export_EMF_jru_v1 implements PlugIn {
 		String name=sd.getFileName();
 		String path=dir+name;
 		Object plot=jutils.runReflectionMethod(iw,"getPlot",null,null);
-		if(name.endsWith(
+		//IJ.log("got plot");
+		//if(name.endsWith(
 		if(plot!=null){
 			if(name.endsWith(".ps")) jutils.runReflectionMethod(plot,"saveAsPS",new Object[]{path});
 			else if(name.endsWith(".eps")) jutils.runReflectionMethod(plot,"saveAsPS",new Object[]{path});
+			else if(name.endsWith(".pdf")) jutils.runReflectionMethod(plot,"saveAsPDF",new Object[]{path});
 			else jutils.runReflectionMethod(plot,"saveAsEMF",new Object[]{path});	
 		}
 		//p4.saveAsEMF(dir+name);

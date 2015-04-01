@@ -13,6 +13,7 @@ import ij.macro.MacroExtension;
 import ij.macro.ExtensionDescriptor;
 import java.awt.Color;
 import ij.plugin.*;
+import jalgs.*;
 import jguis.*;
 
 
@@ -43,11 +44,14 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("setMagRatio",this,ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelNpts",this,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelIndexXYVals",this,ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER),
+			ExtensionDescriptor.newDescriptor("getSelStat",this,ARG_STRING,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("addXYSeries",this,ARG_ARRAY,ARG_ARRAY),
 			ExtensionDescriptor.newDescriptor("updateSelSeries",this,ARG_ARRAY,ARG_ARRAY),
 			ExtensionDescriptor.newDescriptor("createPlot",this,ARG_STRING,ARG_STRING,ARG_ARRAY,ARG_ARRAY),
 			ExtensionDescriptor.newDescriptor("convertToPW4",this),
-			ExtensionDescriptor.newDescriptor("convertToPW",this)
+			ExtensionDescriptor.newDescriptor("convertToPW",this),
+			ExtensionDescriptor.newDescriptor("setBinSize",this,MacroExtension.ARG_NUMBER),
+			ExtensionDescriptor.newDescriptor("getSelected",this,MacroExtension.ARG_OUTPUT+MacroExtension.ARG_NUMBER)
 		};
 
 		Functions.registerExtensions(this);
@@ -189,6 +193,17 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 				((Double[])args[2])[0]=new Double(yvals[sel][index]);
 			}
 		}
+		if(name.equals("getSelStat")){
+			float[][] yvals=(float[][])jutils.runPW4VoidMethod(iw,"getYValues");
+			int sel=(Integer)jutils.runPW4VoidMethod(iw,"getSelected");
+			if(sel<0) sel=0;
+			String stat=(String)args[0];
+			int[] npts=(int[])jutils.runPW4VoidMethod(iw,"getNpts");
+			float[] temp=new float[npts[sel]];
+			System.arraycopy(yvals[sel],0,temp,0,npts[sel]);
+			float stat2=jstatistics.getstatistic(stat,temp,null);
+			((Double[])args[1])[0]=new Double(stat2);
+		}
 		if(name.equals("addXYSeries")){
 			Object[] xvals=(Object[])args[0];
 			Object[] yvals=(Object[])args[1];
@@ -217,6 +232,15 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			} else {
 				jutils.runReflectionMethod(plot,"updateSeries",new Object[]{yvals2,sel,true});
 			}
+		}
+		if(name.equals("setBinSize")){
+			float binsize=((Double)args[0]).floatValue();
+			Object plot=jutils.runReflectionMethod(iw,"getPlot",null);
+			jutils.runReflectionMethod(plot,"setBinSizeUnits",new Object[]{binsize});
+		}
+		if(name.equals("getSelected")){
+			int sel=((Integer)jutils.runPW4VoidMethod(iw,"getSelected")).intValue();
+			((Double[])args[0])[0]=new Double((double)sel);
 		}
 		jutils.runPW4VoidMethod(iw,"updatePlot");
 		return null;
