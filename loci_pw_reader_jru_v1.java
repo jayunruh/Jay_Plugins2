@@ -5,17 +5,24 @@
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  ******************************************************************************/
-import ij.*;
-import ij.process.*;
-import ij.gui.*;
-import loci.common.*;
-import loci.formats.*;
-import loci.formats.meta.*;
-import ome.xml.model.primitives.*;
-import java.io.*;
+import java.io.IOException;
+
+import ome.units.quantity.Length;
+import ome.units.quantity.Time;
+import ome.units.UNITS;
+import ij.ImageListener;
+import ij.ImagePlus;
+import loci.common.Location;
+import loci.common.RandomAccessInputStream;
+import loci.formats.CoreMetadata;
+import loci.formats.FormatException;
+import loci.formats.FormatReader;
+import loci.formats.FormatTools;
+import loci.formats.MetadataTools;
+import loci.formats.meta.MetadataStore;
 import jguis.*;
 
-public class loci_pw_reader_jru_v1 extends FormatReader implements ImageListener {
+public class loci_pw_reader_jru_v1 extends FormatReader implements ImageListener{
 	public String path;
 	public Object plot;
 	public int plotindex;
@@ -48,7 +55,8 @@ public class loci_pw_reader_jru_v1 extends FormatReader implements ImageListener
 		//IJ.log(path);
 		//CoreMetadata cm=core.get(0);
 		//CoreMetadata cm=super.getCoreMetadataList().get(0);
-		CoreMetadata cm=getCoreMetadata()[0];
+		//CoreMetadata cm=getCoreMetadata()[0];
+		CoreMetadata cm=getCoreMetadataList().get(0);
 		cm.sizeX=Plot4.WIDTH+Plot4.LEFT_MARGIN+Plot4.RIGHT_MARGIN;
 		cm.sizeY=Plot4.HEIGHT+Plot4.BOTTOM_MARGIN+Plot4.TOP_MARGIN;
 		cm.sizeZ=1;
@@ -68,10 +76,10 @@ public class loci_pw_reader_jru_v1 extends FormatReader implements ImageListener
 		MetadataStore store = makeFilterMetadata();
 		MetadataTools.populatePixels(store, this);
 		store.setImageName(path,0);
-		store.setPixelsPhysicalSizeX(new PositiveFloat(1.0),0);
-		store.setPixelsPhysicalSizeY(new PositiveFloat(1.0),0);
-		store.setPixelsPhysicalSizeZ(new PositiveFloat(1.0),0);
-		store.setPixelsTimeIncrement(1.0,0);
+		store.setPixelsPhysicalSizeX(new Length(1.0,UNITS.MICROM),0);
+		store.setPixelsPhysicalSizeY(new Length(1.0,UNITS.MICROM),0);
+		store.setPixelsPhysicalSizeZ(new Length(1.0,UNITS.MICROM),0);
+		store.setPixelsTimeIncrement(new Time(1.0,UNITS.S),0);
 		if(path.endsWith(".pw") || Plot4.is_this(path)){
 			plot=new Plot4(path); plotindex=0;
 		} else if(Plot3D.is_this(path)){
@@ -111,5 +119,4 @@ public class loci_pw_reader_jru_v1 extends FormatReader implements ImageListener
 	public void imageClosed(ImagePlus imp){}
 
 	public void imageUpdated(ImagePlus imp){}
-
 }

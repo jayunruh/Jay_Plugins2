@@ -46,6 +46,13 @@ public class thick_3D_polyline_profile_jru_v1 implements PlugIn {
 			pyvals[i]=yvals[0][i]/psize;
 			pzvals[i]=zvals[0][0][i]/psize;
 		}
+		if(pxvals.length<2){
+			//if we have a single point, just draw a horizontal line at 1/3 of the thickness
+			float temp=pxvals[0]-(float)thickness/6.0f;
+			pxvals=new float[]{temp,temp+(float)thickness/3.0f};
+			pyvals=new float[]{pyvals[0],pyvals[0]};
+			pzvals=new float[]{pzvals[0],pzvals[0]};
+		}
 		int width=imps[1].getWidth(); int height=imps[1].getHeight();
 		int length=profiler.get3DPolygonLength(pxvals,pyvals,pzvals,false);
 		float extlen=ext*(float)length; //extension length in pixel units

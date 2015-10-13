@@ -5,32 +5,22 @@
  * which accompanies this distribution, and is available at
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  ******************************************************************************/
-import java.io.IOException;
-
-import ome.units.quantity.Length;
-import ome.units.quantity.Time;
-import ome.units.UNITS;
-import ij.ImageListener;
-import ij.ImagePlus;
-import loci.common.Location;
-import loci.common.RandomAccessInputStream;
-import loci.formats.CoreMetadata;
-import loci.formats.FormatException;
-import loci.formats.FormatReader;
-import loci.formats.FormatTools;
-import loci.formats.MetadataTools;
-import loci.formats.meta.MetadataStore;
-import jguis.*;
-import ij.gui.*;
 import ij.*;
+import ij.process.*;
+import ij.gui.*;
+import loci.common.*;
+import loci.formats.*;
+import loci.formats.meta.*;
+import ome.xml.model.primitives.*;
 import java.io.*;
+import jguis.*;
 
-public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListener {
+public class loci_sky_reader_jru_v1 extends FormatReader implements ImageListener {
 	public String path;
-	public KissPanel sp;
+	public SkyPanel_v3 sp;
 
-	public loci_kiss_reader_jru_v1(){
-		super("KISS Analysis",new String[]{"kiss","sky"});
+	public loci_sky_reader_jru_v1(){
+		super("SKY Analysis",new String[]{"sky"});
 		suffixSufficient=true;
 		suffixNecessary=true;
 		domains=new String[]{FormatTools.UNKNOWN_DOMAIN};
@@ -56,8 +46,8 @@ public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListen
 		path=Location.getMappedId(id);
 		//IJ.log(path);
 		//CoreMetadata cm=core.get(0);
-		CoreMetadata cm=getCoreMetadataList().get(0);
-		//CoreMetadata cm=getCoreMetadata()[0];
+		//CoreMetadata cm=super.getCoreMetadataList().get(0);
+		CoreMetadata cm=getCoreMetadata()[0];
 		cm.sizeX=20;
 		cm.sizeY=20;
 		cm.sizeZ=1;
@@ -77,15 +67,15 @@ public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListen
 		MetadataStore store = makeFilterMetadata();
 		MetadataTools.populatePixels(store, this);
 		store.setImageName(path,0);
-		store.setPixelsPhysicalSizeX(new Length(1.0,UNITS.MICROM),0);
-		store.setPixelsPhysicalSizeY(new Length(1.0,UNITS.MICROM),0);
-		store.setPixelsPhysicalSizeZ(new Length(1.0,UNITS.MICROM),0);
-		store.setPixelsTimeIncrement(new Time(1.0,UNITS.S),0);
-		if(path.endsWith(".kiss") || path.endsWith(".sky")){
-			sp=getKISSPanel(path);
+		store.setPixelsPhysicalSizeX(new PositiveFloat(1.0),0);
+		store.setPixelsPhysicalSizeY(new PositiveFloat(1.0),0);
+		store.setPixelsPhysicalSizeZ(new PositiveFloat(1.0),0);
+		store.setPixelsTimeIncrement(1.0,0);
+		if(path.endsWith(".sky")){
+			sp=getSKYPanel(path);
 		} else {
 			sp=null;
-			throw new FormatException("unsupported or corrupted spectral karyotyping file");
+			throw new FormatException("unsupported or corrupted sky file");
 		}
 		if(sp!=null) ImagePlus.addImageListener(this);
 		//IJ.runPlugIn("import_plot_jru_v1",path);
@@ -96,7 +86,7 @@ public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListen
 		String tpath=dir+imp.getTitle();
 		//IJ.log(tpath);
 		if(tpath.equalsIgnoreCase(path)){
-			KissPanel.launch_frame(sp);
+			SkyPanel_v3.launch_frame(sp);
 			imp.close();
 			ImagePlus.removeImageListener(this);
 		}
@@ -106,10 +96,10 @@ public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListen
 
 	public void imageUpdated(ImagePlus imp){}
 
-	public KissPanel getKISSPanel(String path){
+	public SkyPanel_v3 getSKYPanel(String path){
 		try{
 			InputStream is=new BufferedInputStream(new FileInputStream(path));
-			KissPanel sp=new KissPanel();
+			SkyPanel_v3 sp=new SkyPanel_v3();
 			int nch=5;
 			GenericDialog gd2=new GenericDialog("Options");
 			gd2.addNumericField("Area Accuracy (percent)",30,0);
@@ -118,14 +108,6 @@ public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListen
 			}
 			//gd2.addNumericField("Contribution Threshold",0.35,5,15,null);
 			gd2.addCheckbox("Mouse?",false);
-			Object[] codes=KissPanel.getCustomCodes();
-			String[] codenames=new String[]{"none"};
-			if(codes!=null){
-				String[] temp=(String[])codes[0];
-				codenames=new String[temp.length+1]; codenames[0]="none";
-				for(int i=0;i<temp.length;i++) codenames[i+1]=temp[i];
-			}
-			gd2.addChoice("Custom_Code",codenames,codenames[0]);
 			gd2.addNumericField("Box_Width",150,0);
 			gd2.addNumericField("Box_Height",100,0);
 			gd2.addCheckbox("Output_Unmixed?",false);
@@ -135,13 +117,12 @@ public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListen
 			for(int i=0;i<nch;i++) sp.objthresh2[i]=(float)gd2.getNextNumber();
 			//sp.objthresh=(float)gd2.getNextNumber();
 			boolean mouse=gd2.getNextBoolean();
-			int codeindex=gd2.getNextChoiceIndex();
 			int bwidth=(int)gd2.getNextNumber();
 			int bheight=(int)gd2.getNextNumber();
 			boolean outunmixed=gd2.getNextBoolean();
 			int[] colorindices={4,1,2,6,3};
 			GenericDialog gd3=new GenericDialog("Color Options");
-			for(int i=0;i<5;i++) gd3.addChoice("Ch"+(i+1)+" Color",KissPanel.colornames,KissPanel.colornames[colorindices[i]]);
+			for(int i=0;i<5;i++) gd3.addChoice("Ch"+(i+1)+" Color",SkyPanel_v3.colornames,SkyPanel_v3.colornames[colorindices[i]]);
 			gd3.showDialog(); if(gd3.wasCanceled()) return null;
 			for(int i=0;i<5;i++) colorindices[i]=gd3.getNextChoiceIndex();
 			sp.colorindices=colorindices;
@@ -149,9 +130,7 @@ public class loci_kiss_reader_jru_v1 extends FormatReader implements ImageListen
 			sp.dapilast=false;
 			sp.cellwidth=bwidth;
 			sp.cellheight=bheight;
-			int[][] custcode=null;
-			if(codeindex>0) custcode=(int[][])codes[codeindex+1];
-			sp.init(is,mouse,custcode);
+			sp.init(is,mouse);
 			is.close();
 			if(outunmixed){
 				ImageStack unstack=jutils.array2stack(sp.unmixed,sp.threshimp.getWidth(),sp.threshimp.getHeight());

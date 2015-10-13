@@ -21,6 +21,11 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 	gausfunc gf;
 
 	public void run(String arg) {
+		//for now use fit multi gaussian jru v4 with a single position to get errors
+		/*GenericDialog gd=new GenericDialog("Options");
+		gd.addCheckbox("Get_Errors",false);
+		gd.showDialog(); if(gd.wasCanceled()) return;
+		boolean errs=gd.getNextBoolean();*/
 		ImageWindow iw=WindowManager.getCurrentWindow();
 		PlotWindow4 pw=jutils.getPW4SelCopy(iw);
 		String title=pw.getTitle();
@@ -45,6 +50,10 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 		pw.updateSeries(fit,series,false);
 		c2=(float)stats[1];
 		iterations=(int)stats[0];
+		/*if(errs){
+			monte_carlo_errors_v2 mcerrs=new monte_carlow_errors_v2(this,0.0001,50,false,0.1);
+			double[][] temp=mcerrs.geterrors(params,fixes,constraints,yvals[0],null,1000);
+		}*/
 		
 		TextWindow outtable=jutils.selectTable("Gauss Fits");
 		if(outtable==null){

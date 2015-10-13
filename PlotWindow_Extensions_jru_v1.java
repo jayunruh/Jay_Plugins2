@@ -52,6 +52,8 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("convertToPW",this),
 			ExtensionDescriptor.newDescriptor("setBinSize",this,MacroExtension.ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelected",this,MacroExtension.ARG_OUTPUT+MacroExtension.ARG_NUMBER)
+			ExtensionDescriptor.newDescriptor("setCommand",this,ARG_STRING,ARG_STRING);
+			ExtensionDescriptor.newDescriptor("getCommand",this,ARG_STRING,ARG_OUTPUT+ARG_STRING);
 		};
 
 		Functions.registerExtensions(this);

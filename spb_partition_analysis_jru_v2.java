@@ -38,6 +38,8 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		gd.addNumericField("Nuclear_threshold",nucthresh,5,15,null);
 		gd.addNumericField("SPB_channel",2,0);
 		gd.addNumericField("NE_channel",1,0);
+		gd.addCheckbox("other_channel",false);
+		gd.addNumericField("Other_channel",3,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		debug=gd.getNextBoolean();
 		threshmult=(float)gd.getNextNumber();
@@ -47,6 +49,8 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		nucthresh=(float)gd.getNextNumber();
 		int spbch=(int)gd.getNextNumber()-1;
 		int nech=(int)gd.getNextNumber()-1;
+		boolean third=gd.getNextBoolean();
+		int othch=(int)gd.getNextNumber()-1;
 		ImagePlus imp=WindowManager.getCurrentImage();
 		int width=imp.getWidth(); int height=imp.getHeight();
 		int channels=imp.getNChannels();
@@ -55,7 +59,11 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		float[] maxspbproj=jutils.get3DProjZStat(stack,0,spbch,1,slices,channels,"Max");
 		float[] sumspbproj=jutils.get3DProjZStat(stack,0,spbch,1,slices,channels,"Sum");
 		float[] sumnpcproj=jutils.get3DProjZStat(stack,0,nech,1,slices,channels,"Sum");
+		float[] sumothproj=null;
+		if(third) sumothproj=jutils.get3DProjZStat(stack,0,othch,1,slices,channels,"Sum");
 		Object[] npcstack=jutils.get3DZSeries(stack,nech,0,1,slices,channels);
+		Object[] othstack=null;
+		if(third) othstack=jutils.get3DZSeries(stack,othch,0,1,slices,channels);
 		Roi roi=imp.getRoi();
 		if(roi!=null){
 			Polygon polyroi=roi.getPolygon();
@@ -64,6 +72,10 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 				for(int i=0;i<sumnpcproj.length;i++) sumnpcproj[i]-=sumback;
 				float sumback2=jstatistics.getstatistic("Avg",sumspbproj,width,height,polyroi,null);
 				for(int i=0;i<sumspbproj.length;i++) sumspbproj[i]-=sumback2;
+				if(third){
+					float sumback3=jstatistics.getstatistic("Avg",sumothproj,width,height,polyroi,null);
+					for(int i=0;i<sumothproj.length;i++) sumothproj[i]-=sumback3;
+				}
 			}
 		}
 		//now process the spbproj to get the spb positions
@@ -94,6 +106,7 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		//the spb intensities are the sum of the region surrounding the spb centroid in the sum proj image
 		float[] spbintensities=new float[centroids.length];
 		float[] spbintensitiesspb=new float[centroids.length];
+		float[] spbintensitiesoth=new float[centroids.length];
 		RoiManager rman=RoiManager.getInstance();
 		if(rman==null){
 			rman=new RoiManager();
@@ -104,6 +117,7 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 			centroids[i][1]=(float)Math.round(centroids[i][1]);
 			Rectangle rect=new Rectangle((int)(centroids[i][0]-spbsize),(int)(centroids[i][1]-spbsize),2*spbsize+1,2*spbsize+1);
 			spbintensities[i]=jstatistics.getstatistic("Sum",sumnpcproj,width,height,rect,null);
+			if(third) spbintensitiesoth[i]=jstatistics.getstatistic("Sum",sumothproj,width,height,rect,null);
 			spbintensitiesspb[i]=jstatistics.getstatistic("Sum",sumspbproj,width,height,rect,null);
 			rman.addRoi(new PointRoi((int)centroids[i][0],(int)centroids[i][1]));
 		}
@@ -112,17 +126,22 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		elim_points(nucmask,width,height,centroids);
 		nucmask=blurImage(nucmask,width,height,3.0f);
 		//now get the sum of each nucleus
-		TextWindow tw=new TextWindow("Intensities","id\tspbint\tnucint\tratio\tspbmarkint\tnucarea\tnucz","",400,400);
+		TextWindow tw=null;
+		if(!third) tw=new TextWindow("Intensities","id\tspbint\tnucint\tratio\tspbmarkint\tnucarea\tnucz","",400,400);
+		else tw=new TextWindow("Intensities","id\tspbint\tnucint\tratio\totherint\totherratio\tspbmarkint\tnucarea\tnucz","",400,400);
 		float[] nucint=new float[centroids.length];
 		float[] nucarea=new float[centroids.length];
 		float[] nucz=new float[centroids.length];
+		float[] othint=new float[centroids.length];
 		for(int i=0;i<centroids.length;i++){
 			Polygon outline=get_local_object(nucmask,(int)centroids[i][0],(int)centroids[i][1],width,height,maxnucsize,nucthresh);
 			nucint[i]=jstatistics.getstatistic("Sum",sumnpcproj,width,height,outline,null);
+			if(third) othint[i]=jstatistics.getstatistic("Sum",sumothproj,width,height,outline,null);
 			//find the maximum z plane for the nucleus
 			nucz[i]=get_max_slice(npcstack,outline,width,height);
 			nucarea[i]=measure_object.area(outline);
-			tw.append(""+(i+1)+"\t"+spbintensities[i]+"\t"+nucint[i]+"\t"+(spbintensities[i]/nucint[i])+"\t"+spbintensitiesspb[i]+"\t"+nucarea[i]+"\t"+nucz[i]+"\n");
+			if(!third) tw.append(""+(i+1)+"\t"+spbintensities[i]+"\t"+nucint[i]+"\t"+(spbintensities[i]/nucint[i])+"\t"+spbintensitiesspb[i]+"\t"+nucarea[i]+"\t"+nucz[i]+"\n");
+			else tw.append(""+(i+1)+"\t"+spbintensities[i]+"\t"+nucint[i]+"\t"+(spbintensities[i]/nucint[i])+"\t"+othint[i]+"\t"+(spbintensitiesoth[i]/othint[i])+"\t"+spbintensitiesspb[i]+"\t"+nucarea[i]+"\t"+nucz[i]+"\n");
 		}
 		if(debug) new ImagePlus("Masks",objstack).show();
 	}
