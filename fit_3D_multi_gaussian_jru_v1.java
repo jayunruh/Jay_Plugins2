@@ -48,7 +48,11 @@ public class fit_3D_multi_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2
 			IJ.error("need point rois");
 		}
 		Roi[] rois=rman.getRoisAsArray();
-		Object[] stack2=jutils.stack2array(stack);
+		//Object[] stack2=jutils.stack2array(stack);
+		int currt=imp.getT()-1; int currc=imp.getC()-1;
+		int nframes=imp.getNFrames(); int nchans=imp.getNChannels(); zpts=imp.getNSlices();
+		if(zpts==1){zpts=nframes; nframes=1;}
+		Object[] stack2=jutils.get3DZSeries(stack,currc,currt,nframes,zpts,nchans);
 		float[][] fstack=algutils.get_region2(stack2,0,0,xpts,ypts,xpts,ypts);
 		ngaus=rois.length;
 		double[] params=new double[ngaus*6+1];
@@ -132,6 +136,8 @@ public class fit_3D_multi_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2
 		TextWindow outtable=jutils.selectTable("MultiGaus Fits");
 		if(outtable==null){
 			outtable=FitDialog_v2.make_outtable("MultiGaus Fits",paramsnames);
+		} else {
+			FitDialog_v2.adapt_outtable(outtable,paramsnames);
 		}
 		outtable.append(sb.toString());
 		if(showplot){

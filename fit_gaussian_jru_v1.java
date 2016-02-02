@@ -36,17 +36,23 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 		colors[0]=0;
 
 		//parameters are baseline,xc1,stdev1,amp1
-		double[] params=guessParams(xvals[0],yvals[0],length);
+		fit_gaussian fg=new fit_gaussian();
+		//double[] params=guessParams(xvals[0],yvals[0],length);
+		double[] params=new double[4];
+		//double[] params=fg.guess1DParams(xvals[0],yvals[0],length);
+		//IJ.log(""+params[0]+" , "+params[1]+" , "+params[2]+" , "+params[3]);
 		int[] fixes={0,0,0,0};
 		double c2=0.0f;
 		int iterations=0;
 
 		double[] stats=new double[2];
-		double[][] constraints=getConstraints(xvals[0],params);
+		//double[][] constraints=getConstraints(xvals[0],params);
+
 
 		pw.addPoints(xvals[0],new float[length],false);
 		int series=pw.getNpts().length-1;
-		float[] fit=runFit(xvals[0],yvals[0],params,stats,constraints,fixes);
+		//float[] fit=runFit(xvals[0],yvals[0],params,stats,constraints,fixes);
+		float[] fit=fg.run1DFit(xvals[0],yvals[0],params,stats,null,fixes);
 		pw.updateSeries(fit,series,false);
 		c2=(float)stats[1];
 		iterations=(int)stats[0];
@@ -120,18 +126,6 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 		double[] params={(double)min,(double)xvals[maxloc],(double)fwhm/2.35,(double)(max-min)};
 		return params;
 	}
-
-	/*public double fitfunc(double[] params,int indvar){
-		//parameters are baseline,xc1,stdev1,amp1
-		double retval=params[0];
-		for(int i=0;i<1;i++){
-			if(params[3+i*3]>0.0){
-				double xshift2=(params[1+i*3]-tempx[indvar])*(params[1+i*3]-tempx[indvar]);
-				retval+=params[3+i*3]*Math.exp(-xshift2/(2.0*params[2+i*3]*params[2+i*3]));
-			}
-		}
-		return retval;
-	}*/
 
 	public double[] fitfunc(double[] params){
 		//parameters are baseline,xc1,stdev1,amp1

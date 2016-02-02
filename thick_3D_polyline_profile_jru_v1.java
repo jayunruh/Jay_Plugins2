@@ -22,6 +22,9 @@ public class thick_3D_polyline_profile_jru_v1 implements PlugIn {
 		float[][] xvals=(float[][])jutils.runPW4VoidMethod(iw,"getXValues");
 		float[][] yvals=(float[][])jutils.runPW4VoidMethod(iw,"getYValues");
 		float[][][] zvals=(float[][][])jutils.runPW4VoidMethod(iw,"getZValues");
+		int sel=(Integer)jutils.runPW4VoidMethod(iw,"getSelected");
+		if(sel<0) sel=0;
+		int[][] npts=(int[][])jutils.runPW4VoidMethod(iw,"getNpts");
 		GenericDialog gd=new GenericDialog("Options");
 		gd.addNumericField("Thickness",5,0);
 		gd.addNumericField("Z_Ratio",jutils.get_zratio(imps[1]),5,15,null);
@@ -38,13 +41,13 @@ public class thick_3D_polyline_profile_jru_v1 implements PlugIn {
 		boolean ignore=gd.getNextBoolean();
 		float psize=(float)jutils.get_psize(imps[1]);
 		if(ignore) psize=1.0f;
-		float[] pxvals=new float[xvals[0].length];
-		float[] pyvals=new float[xvals[0].length];
-		float[] pzvals=new float[xvals[0].length];
-		for(int i=0;i<xvals[0].length;i++){
-			pxvals[i]=xvals[0][i]/psize;
-			pyvals[i]=yvals[0][i]/psize;
-			pzvals[i]=zvals[0][0][i]/psize;
+		float[] pxvals=new float[npts[0][sel]];
+		float[] pyvals=new float[npts[0][sel]];
+		float[] pzvals=new float[npts[0][sel]];
+		for(int i=0;i<npts[0][sel];i++){
+			pxvals[i]=xvals[sel][i]/psize;
+			pyvals[i]=yvals[sel][i]/psize;
+			pzvals[i]=zvals[0][sel][i]/psize;
 		}
 		if(pxvals.length<2){
 			//if we have a single point, just draw a horizontal line at 1/3 of the thickness
