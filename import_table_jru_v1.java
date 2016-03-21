@@ -30,7 +30,7 @@ public class import_table_jru_v1 implements PlugIn {
 		gd.addCheckbox("Has_Column_Labels",true);
 		String[] delims={"Tab","Comma","Space"};
 		String[] delims2={"\t",","," "};
-		gd.addChoice("Delimiter",delims,delims[1]);
+		gd.addChoice("Delimiter",delims,delims[0]);
 		gd.addNumericField("ASCII number(optional)",0,0);
 		gd.addCheckbox("Treat Consecutive Delims as 1",false);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
