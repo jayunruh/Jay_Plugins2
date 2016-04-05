@@ -26,6 +26,7 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 		gd.addCheckbox("Get_Errors",false);
 		gd.showDialog(); if(gd.wasCanceled()) return;
 		boolean errs=gd.getNextBoolean();*/
+		boolean errs=false;
 		ImageWindow iw=WindowManager.getCurrentWindow();
 		PlotWindow4 pw=jutils.getPW4SelCopy(iw);
 		String title=pw.getTitle();
@@ -48,7 +49,6 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 		double[] stats=new double[2];
 		//double[][] constraints=getConstraints(xvals[0],params);
 
-
 		pw.addPoints(xvals[0],new float[length],false);
 		int series=pw.getNpts().length-1;
 		//float[] fit=runFit(xvals[0],yvals[0],params,stats,constraints,fixes);
@@ -56,10 +56,13 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 		pw.updateSeries(fit,series,false);
 		c2=(float)stats[1];
 		iterations=(int)stats[0];
-		/*if(errs){
-			monte_carlo_errors_v2 mcerrs=new monte_carlow_errors_v2(this,0.0001,50,false,0.1);
-			double[][] temp=mcerrs.geterrors(params,fixes,constraints,yvals[0],null,1000);
-		}*/
+		float[] err=null;
+		if(errs){
+			monte_carlo_errors_v2 mcerrs=new monte_carlo_errors_v2(this,0.0001,10,false,0.1);
+			double[][] temp=mcerrs.geterrors(params,fixes,null,yvals[0],null,1000);
+			err=new float[temp.length];
+			for(int i=0;i<err.length;i++) err[i]=jstatistics.getstatistic("StDev",temp[i],null);
+		}
 		
 		TextWindow outtable=jutils.selectTable("Gauss Fits");
 		if(outtable==null){
@@ -73,6 +76,14 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 			IJ.log(paramnames[i]+" = "+params[i]);  sb.append("\t"+(float)params[i]);
 		}
 		outtable.append(sb.toString());
+		if(errs){
+			StringBuffer sb2=new StringBuffer();
+			sb2.append(pw.getTitle()+"_errs");
+			sb2.append("\t"+(float)err[params.length]);
+			sb2.append("\t"+0.0f);
+			for(int i=0;i<params.length;i++) sb.append("\t"+(float)err[i]);
+			outtable.append(sb.toString());
+		}
 	}
 
 	public float[] runFit(float[] xvals,float[] yvals,double[] params,double[] stats,double[][] constraints,int[] fixes){

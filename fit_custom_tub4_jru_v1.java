@@ -25,11 +25,12 @@ public class fit_custom_tub4_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 	//first we create a 2D xz profile summing over the spots
 	//then we fit each spot at its center z position to a lateral gaussian to get width
 	//positions are initialized from a set of rois
+	//latest version fits only the current frame and doesn't fit z if there is only one slice
 	public void run(String arg) {
 		ImagePlus imp=WindowManager.getCurrentImage();
 		xpts=imp.getWidth(); ypts=imp.getHeight();
 		ImageStack stack=imp.getStack();
-		zpts=stack.getSize();
+		//zpts=stack.getSize();
 		zratio=(float)jutils.get_zratio(imp);
 		GenericDialog gd=new GenericDialog("Options");
 		gd.addNumericField("Z_Ratio",zratio,5,15,null);
@@ -47,7 +48,14 @@ public class fit_custom_tub4_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 			IJ.error("need point rois");
 		}
 		Roi[] rois=rman.getRoisAsArray();
-		Object[] stack2=jutils.stack2array(stack);
+		int slices=imp.getNSlices();
+		zpts=slices;
+		int frames=imp.getNFrames();
+		int channels=imp.getNChannels();
+		int currframe=imp.getT();
+		int currchan=imp.getC();
+		Object[] stack2=jutils.get3DZSeries(stack,currchan-1,currframe-1,frames,slices,channels);
+		//Object[] stack2=jutils.stack2array(stack);
 		//duplicate the stack to get a float array
 		float[][] fstack=algutils.get_region2(stack2,0,0,xpts,ypts,xpts,ypts);
 		ngaus=rois.length; //this should always be 2
@@ -124,6 +132,12 @@ public class fit_custom_tub4_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 		constraints[0][10]=0.25*zratio; constraints[1][10]=3.0*zratio*startzstdev; 
 		gf=new gausfunc();
 		int[] fixes=new int[params.length];
+		if(zpts==1){
+			fixes[3]=1;
+			fixes[5]=1;
+			fixes[8]=1;
+			fixes[10]=1;
+		}
 		NLLSfit_v2 fitclass=new NLLSfit_v2(this,0.0001,10,0.1);
 		double[] stats=new double[2];
 		float[] fit=fitclass.fitdata(params,fixes,constraints,xzprof,null,stats,true);
