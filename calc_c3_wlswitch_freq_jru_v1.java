@@ -41,17 +41,20 @@ public class calc_c3_wlswitch_freq_jru_v1 implements PlugIn {
 			showErrorMessage(e);
 			//return;
 		}
-		double centswfreq=20000000.0/1000.0111; //this is for a switching frequency of 20000.0
+
 		GenericDialog gd=new GenericDialog("Options");
 		gd.addNumericField("Center Freq (Hz)",10000.0,5,15,null);
 		gd.addNumericField("freq resolution",0.001,5,15,null);
 		gd.addNumericField("# of frequencies",100,0);
+		gd.addNumericField("Photon Mode Freq",20000000,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		double sfreq=gd.getNextNumber();
-		double divider=20000.0/sfreq;
-		centswfreq/=divider;
 		double freqres=gd.getNextNumber();
 		int nfreq=(int)gd.getNextNumber();
+		int pmfreq=(int)gd.getNextNumber();
+		double centswfreq=20000000.0/1000.0111; //this is for a switching frequency of 20000.0
+		double divider=20000.0/sfreq;
+		centswfreq/=divider;
 		sfreq=centswfreq-freqres*(double)nfreq/2.0;
 		float[] ratio=new float[nfreq];
 		float[] freqs=new float[nfreq];
@@ -61,9 +64,9 @@ public class calc_c3_wlswitch_freq_jru_v1 implements PlugIn {
 		float maxratio=0.0f;
 		for(int i=0;i<nfreq;i++){
 			double currswfreq=sfreq+freqres*(double)i;
-			int offset=(new pmodeconvert()).calc_wlswitch_offset(pmdata,currswfreq,20000000);
+			int offset=(new pmodeconvert()).calc_wlswitch_offset(pmdata,currswfreq,pmfreq);
 			int[] newpmdata=(new pmodeconvert()).subpmoffset(pmdata,offset);
-			float[] hist=(new pmodeconvert()).wlswitch_phase_hist(newpmdata,currswfreq,20000000);
+			float[] hist=(new pmodeconvert()).wlswitch_phase_hist(newpmdata,currswfreq,pmfreq);
 			int halflength=(int)(0.5*(double)hist.length);
 			float temp=0.0f;
 			for(int j=0;j<halflength;j++) temp+=hist[j];

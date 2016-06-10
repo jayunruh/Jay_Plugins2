@@ -55,7 +55,7 @@ public class line_radial_angle_measure_jru_v1 implements PlugIn {
 			IJ.log("need a centroid or area marker");
 		}
 		TextWindow tw=jutils.selectTable("Radial Angle Measures");
-		if(tw==null) tw=new TextWindow("Radial Angle Measures","Image\tRoi\tAngle","",400,200);
+		if(tw==null) tw=new TextWindow("Radial Angle Measures","Image\tRoi\tAngle\tdist\tcenterangle","",400,200);
 		for(int i=0;i<rois.length;i++){
 			if(i!=croi){
 				int x1,x2,y1,y2;
@@ -75,7 +75,10 @@ public class line_radial_angle_measure_jru_v1 implements PlugIn {
 				float yc2=0.5f*((float)y1+(float)y2);
 				float angle=measure_object.get_inner_angle_points(new float[]{(float)xc,xc2,(float)x2},new float[]{(float)yc,yc2,(float)y2});
 				float angledeg=(float)Math.toDegrees(angle);
-				tw.append(imp.getTitle()+"\t"+(i+1)+"\t"+angledeg);
+				if(angledeg>90.0f) angledeg=180.0f-angledeg;
+				float dist=(float)Math.sqrt((xc2-xc)*(xc2-xc)+(yc2-yc)*(yc2-yc));
+				float centerangle=(float)Math.atan2(yc2-yc,xc2-xc);
+				tw.append(imp.getTitle()+"\t"+(i+1)+"\t"+angledeg+"\t"+dist+"\t"+centerangle);
 			}
 		}
 	}

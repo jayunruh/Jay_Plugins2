@@ -22,24 +22,27 @@ public class import_confocor3_trajectory_jru_v1 implements PlugIn {
 		double sfreq=50000.0;
 		//sfreq=20000000.0/500.5;
 		gd.addNumericField("Sampling Frequency (Hz)?",sfreq,1,10,null);
-		gd.addCheckbox("Photon Mode",false);
+		gd.addCheckbox("Photon_Mode",false);
+		gd.addNumericField("Photon_Mode_Frequency",20000000,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		sfreq=(double)gd.getNextNumber();
 		boolean pmode=gd.getNextBoolean();
+		int colfreq=(int)gd.getNextNumber();
+		//IJ.log(""+colfreq);
 		OpenDialog od = new OpenDialog("Open File","",".raw");
 		String directory=od.getDirectory();
 		String name=od.getFileName();
 		if(name==null){return;}
 		int[] pmdata=null;
 		jdataio jdio=new jdataio();
-		int colfreq=20000000;
+		//int colfreq=20000000;
 		try{
 			File infile=new File(directory+name);
 			int length=(int)(((float)infile.length()-128.0f)/4.0f);
 			InputStream instream=new BufferedInputStream(new FileInputStream(infile));
 			jdio.skipstreambytes(instream,12);
-			colfreq=jdio.readintelint(instream);
-			jdio.skipstreambytes(instream,128-12-4);
+			//colfreq=jdio.readintelint(instream);
+			jdio.skipstreambytes(instream,128-12);
 			pmdata=new int[length];
 			if(!jdio.readintelintfile(instream,length,pmdata)){
 				instream.close();
