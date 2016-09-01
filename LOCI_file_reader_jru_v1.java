@@ -44,18 +44,25 @@ public class LOCI_file_reader_jru_v1 implements PlugIn {
 		gd.addCheckbox("Z_Project?",false);
 		gd.addChoice("Proj_Stat",jstatistics.stats,jstatistics.stats[0]);
 		gd.addNumericField("Ref_Chan (0 if none)",0,0);
+		gd.addCheckbox("Open_all_frames",true);
+		gd.addNumericField("Frames_to_open",1,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		boolean outmeta=gd.getNextBoolean();
 		int series=0;
 		if(nseries>1) series=gd.getNextChoiceIndex();
 		boolean zproj=gd.getNextBoolean();
 		int refchan=(int)gd.getNextNumber()-1;
+		boolean allframes=gd.getNextBoolean();
+		int nframes=(int)gd.getNextNumber();
+		int[] lims={0,-1,0,-1,0,nframes-1};
+		if(allframes) lims[5]=-1;
 		String projstat=jstatistics.stats[gd.getNextChoiceIndex()];
 		ImagePlus imp=null;
-		if(!simple) imp=lfr.get_loci_imp(directory,fname,outmeta,series,zproj,projstat,refchan);
+		if(!simple) imp=lfr.get_loci_subimp(directory,fname,outmeta,series,zproj,projstat,refchan,lims);
 		else imp=lfr.get_loci_imp_simple(directory,fname,series);
 		//ImagePlus imp=(new LOCI_file_reader()).get_loci_imp(directory,fname,outmeta,series);
 		imp.show();
+		IJ.log(""+lims[0]+" , "+lims[1]+" , "+lims[2]+" , "+lims[3]+" , "+lims[4]+" , "+lims[5]);
 	}
 
 }
