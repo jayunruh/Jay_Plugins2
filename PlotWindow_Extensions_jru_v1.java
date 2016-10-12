@@ -12,9 +12,11 @@ import ij.macro.Functions;
 import ij.macro.MacroExtension;
 import ij.macro.ExtensionDescriptor;
 import java.awt.Color;
+import java.awt.Frame;
 import ij.plugin.*;
 import jalgs.*;
 import jguis.*;
+import ij.text.*;
 
 
 public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
@@ -51,9 +53,12 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("convertToPW4",this),
 			ExtensionDescriptor.newDescriptor("convertToPW",this),
 			ExtensionDescriptor.newDescriptor("setBinSize",this,MacroExtension.ARG_NUMBER),
-			ExtensionDescriptor.newDescriptor("getSelected",this,MacroExtension.ARG_OUTPUT+MacroExtension.ARG_NUMBER)
-			ExtensionDescriptor.newDescriptor("setCommand",this,ARG_STRING,ARG_STRING);
-			ExtensionDescriptor.newDescriptor("getCommand",this,ARG_STRING,ARG_OUTPUT+ARG_STRING);
+			ExtensionDescriptor.newDescriptor("getSelected",this,MacroExtension.ARG_OUTPUT+MacroExtension.ARG_NUMBER),
+			ExtensionDescriptor.newDescriptor("setCommand",this,ARG_STRING,ARG_STRING),
+			ExtensionDescriptor.newDescriptor("getCommand",this,ARG_STRING,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("getXLabel",this,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("getYLabel",this,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("selectTable",this,ARG_OUTPUT+ARG_STRING)
 		};
 
 		Functions.registerExtensions(this);
@@ -77,6 +82,13 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 				new PlotWindow4("Macro PlotWindow4",xlabel,ylabel,xvals2,yvals2).draw();
 			} else {
 				new PlotWindow4("Macro PlotWindow4",xlabel,ylabel,yvals2).draw();
+			}
+			return null;
+		}
+		if(name.equals("selectTable")){
+			TextWindow[] tw=jutils.selectTables(false,1);
+			if(tw!=null && tw.length>0){
+				((String[])args[0])[0]=tw[0].getTitle();
 			}
 			return null;
 		}
@@ -238,11 +250,20 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 		if(name.equals("setBinSize")){
 			float binsize=((Double)args[0]).floatValue();
 			Object plot=jutils.runReflectionMethod(iw,"getPlot",null);
-			jutils.runReflectionMethod(plot,"setBinSizeUnits",new Object[]{binsize});
+			if(iw.getClass().getName().equals("jguis.PlotWindow2DHist")) jutils.runReflectionMethod(plot,"setBinSize",new Object[]{binsize});
+			else jutils.runReflectionMethod(plot,"setBinSizeUnits",new Object[]{binsize});
 		}
 		if(name.equals("getSelected")){
 			int sel=((Integer)jutils.runPW4VoidMethod(iw,"getSelected")).intValue();
 			((Double[])args[0])[0]=new Double((double)sel);
+		}
+		if(name.equals("getXLabel")){
+			String xlab=(String)jutils.runPW4VoidMethod(iw,"getxLabel");
+			((String[])args[0])[0]=xlab;
+		}
+		if(name.equals("getYLabel")){
+			String ylab=(String)jutils.runPW4VoidMethod(iw,"getyLabel");
+			((String[])args[0])[0]=ylab;
 		}
 		jutils.runPW4VoidMethod(iw,"updatePlot");
 		return null;
