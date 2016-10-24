@@ -11,6 +11,7 @@ import ij.gui.*;
 import java.awt.*;
 import ij.plugin.*;
 import jalgs.*;
+import jalgs.jfft.autocorr;
 import jguis.*;
 
 public class carpet_ICS_jru_v1 implements PlugIn {
