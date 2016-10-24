@@ -39,6 +39,10 @@ public class track_max_not_mask_jru_v1 implements PlugIn, DialogListener,  track
 		fracstat=jstatistics.stats[gd5.getNextChoiceIndex()];
 		threshfraction=2.0f;
 		if(fracstat.equals("Max")) threshfraction=0.5f;
+
+		if (fracstat.equals("Identity")) {
+			threshfraction = (float)imp.getProcessor().getStatistics().max;
+		}
 		fb=new findblobs(width,height,new float[]{0.0f,10000.0f,0.0f,1000.0f,10,5,10});
 		float[] criteria=get_criteria(imp,fb);
 		if(criteria==null) return;
