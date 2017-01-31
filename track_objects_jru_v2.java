@@ -10,6 +10,7 @@ import ij.process.*;
 import ij.gui.*;
 import ij.plugin.*;
 import ij.plugin.frame.*;
+import jalgs.*;
 import jalgs.jseg.*;
 import java.util.*;
 import java.awt.Polygon;
@@ -23,6 +24,7 @@ public class track_objects_jru_v2 implements PlugIn,  track_interface{
 	int nframes;
 	ImageStack measurestack;
 	int measurech;
+	String stat;
 
 	public void run(String arg) {
 		GenericDialog gd=new GenericDialog("Options");
@@ -30,11 +32,13 @@ public class track_objects_jru_v2 implements PlugIn,  track_interface{
 		gd.addNumericField("Min_Traj_Length(frames)",5,0);
 		gd.addNumericField("Max_Frames_Off",0,0);
 		gd.addCheckbox("Measurement_Image?",false);
+		gd.addChoice("Measurement_Statistic",jstatistics.stats,jstatistics.stats[0]);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		float maxdist=(float)gd.getNextNumber();
 		int minsize=(int)gd.getNextNumber();
 		int linkdelay=(int)gd.getNextNumber();
 		boolean measure=gd.getNextBoolean();
+		stat=jstatistics.stats[gd.getNextChoiceIndex()];
 		ImagePlus imp=WindowManager.getCurrentImage();
 		int width=imp.getWidth();
 		int height=imp.getHeight();
@@ -98,7 +102,7 @@ public class track_objects_jru_v2 implements PlugIn,  track_interface{
 		for(int i=0;i<poly.length;i++){
 			float[] temp=measure_object.get_ellipse_parameters(poly[i]);
 			if(measurestack!=null){
-				float[] temp2=fb.get_object_stats(objects,i+1,measurement,"Avg");
+				float[] temp2=fb.get_object_stats(objects,i+1,measurement,stat);
 				temp=combine_arrays(temp,temp2);
 			}
 			params.add(temp);

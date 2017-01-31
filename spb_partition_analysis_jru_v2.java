@@ -40,6 +40,8 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		gd.addNumericField("NE_channel",1,0);
 		gd.addCheckbox("other_channel",false);
 		gd.addNumericField("Other_channel",3,0);
+		gd.addCheckbox("rolling_ball_sub?",false);
+		gd.addNumericField("rolling_ball_radius",50,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		debug=gd.getNextBoolean();
 		threshmult=(float)gd.getNextNumber();
@@ -51,6 +53,8 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		int nech=(int)gd.getNextNumber()-1;
 		boolean third=gd.getNextBoolean();
 		int othch=(int)gd.getNextNumber()-1;
+		boolean rollsub=gd.getNextBoolean();
+		int rollballrad=(int)gd.getNextNumber();
 		ImagePlus imp=WindowManager.getCurrentImage();
 		int width=imp.getWidth(); int height=imp.getHeight();
 		int channels=imp.getNChannels();
@@ -78,11 +82,19 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 				}
 			}
 		}
+		if(rollsub){
+			sumnpcproj=jutils.sub_roll_ball_back(sumnpcproj,rollballrad,width,height);
+			sumspbproj=jutils.sub_roll_ball_back(sumspbproj,rollballrad,width,height);
+			if(third){
+				sumothproj=jutils.sub_roll_ball_back(sumothproj,rollballrad,width,height);
+			}
+		}
 		//now process the spbproj to get the spb positions
 		maxspbproj=jsmooth.smooth2D(maxspbproj,width,height);
 		//subtract a background
 		float[] background=blurImage(maxspbproj,width,height,6.0f);
 		for(int i=0;i<width*height;i++) maxspbproj[i]-=background[i];
+		float[] tempmsp=maxspbproj.clone();
 		//find edges (sobel)
 		maxspbproj=(new jsobel(width,height)).do_sobel(maxspbproj)[0];
 		//now threshhold at threshmult times the avg intensity
@@ -103,6 +115,39 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		}
 		//and their coordinates
 		float[][] centroids=measure_object.centroids(objects,width,height);
+		//now get the areas of the spb's by thresholding at 50% of max-min inside the centroids
+		int[] markareas=new int[fb.nobjects];
+		int[][] lims=fb.getallfilllimits(objects);
+		float[] markmax=fb.get_all_object_stats(objects,tempmsp,lims,"Max");
+		float[] markmin=fb.get_all_object_stats(objects,tempmsp,lims,"Min");
+		float[][] marksums=new float[fb.nobjects][5];
+		float[] markwidths=new float[fb.nobjects];
+		for(int i=0;i<objects.length;i++){
+			int id=(int)objects[i]-1;
+			int y=(int)((float)i/(float)width);
+			int x=i-y*width;
+			if(id>=0){
+				float val=tempmsp[i]-markmin[id];
+				if(val>=0.25f*(markmax[id]-markmin[id])){markareas[id]++;}
+				marksums[id][0]+=val;
+				marksums[id][1]+=val*(float)x;
+				marksums[id][2]+=val*(float)y;
+				marksums[id][3]+=val*(float)x*(float)x;
+				marksums[id][4]+=val*(float)y*(float)y;
+			}
+		}
+		for(int i=0;i<fb.nobjects;i++){
+			marksums[i][4]/=marksums[i][0];
+			marksums[i][3]/=marksums[i][0];
+			marksums[i][2]/=marksums[i][0];
+			marksums[i][1]/=marksums[i][0];
+			float varx=marksums[i][3]-marksums[i][1]*marksums[i][1];
+			float vary=marksums[i][4]-marksums[i][2]*marksums[i][2];
+			float stdx=(float)Math.sqrt(varx);
+			float stdy=(float)Math.sqrt(vary);
+			markwidths[i]=0.5f*2.35f*(stdx+stdy);
+			//markwidths[i]=varx;
+		}
 		//the spb intensities are the sum of the region surrounding the spb centroid in the sum proj image
 		float[] spbintensities=new float[centroids.length];
 		float[] spbintensitiesspb=new float[centroids.length];
@@ -127,8 +172,8 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		nucmask=blurImage(nucmask,width,height,3.0f);
 		//now get the sum of each nucleus
 		TextWindow tw=null;
-		if(!third) tw=new TextWindow("Intensities","id\tspbint\tnucint\tratio\tspbmarkint\tnucarea\tnucz","",400,400);
-		else tw=new TextWindow("Intensities","id\tspbint\tnucint\tratio\totherint\totherratio\tspbmarkint\tnucarea\tnucz","",400,400);
+		if(!third) tw=new TextWindow("Intensities","id\tspbint\tnucint\tratio\tspbmarkint\tnucarea\tnucz\tspbarea\tsbpwidth","",400,400);
+		else tw=new TextWindow("Intensities","id\tspbint\tnucint\tratio\totherint\totherratio\tspbmarkint\tnucarea\tnucz\tspbarea\tspbwidth","",400,400);
 		float[] nucint=new float[centroids.length];
 		float[] nucarea=new float[centroids.length];
 		float[] nucz=new float[centroids.length];
@@ -140,8 +185,8 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 			//find the maximum z plane for the nucleus
 			nucz[i]=get_max_slice(npcstack,outline,width,height);
 			nucarea[i]=measure_object.area(outline);
-			if(!third) tw.append(""+(i+1)+"\t"+spbintensities[i]+"\t"+nucint[i]+"\t"+(spbintensities[i]/nucint[i])+"\t"+spbintensitiesspb[i]+"\t"+nucarea[i]+"\t"+nucz[i]+"\n");
-			else tw.append(""+(i+1)+"\t"+spbintensities[i]+"\t"+nucint[i]+"\t"+(spbintensities[i]/nucint[i])+"\t"+othint[i]+"\t"+(spbintensitiesoth[i]/othint[i])+"\t"+spbintensitiesspb[i]+"\t"+nucarea[i]+"\t"+nucz[i]+"\n");
+			if(!third) tw.append(""+(i+1)+"\t"+spbintensities[i]+"\t"+nucint[i]+"\t"+(spbintensities[i]/nucint[i])+"\t"+spbintensitiesspb[i]+"\t"+nucarea[i]+"\t"+nucz[i]+"\t"+markareas[i]+"\t"+markwidths[i]+"\n");
+			else tw.append(""+(i+1)+"\t"+spbintensities[i]+"\t"+nucint[i]+"\t"+(spbintensities[i]/nucint[i])+"\t"+othint[i]+"\t"+(spbintensitiesoth[i]/othint[i])+"\t"+spbintensitiesspb[i]+"\t"+nucarea[i]+"\t"+nucz[i]+"\t"+markareas[i]+"\t"+markwidths[i]+"\n");
 		}
 		if(debug) new ImagePlus("Masks",objstack).show();
 	}

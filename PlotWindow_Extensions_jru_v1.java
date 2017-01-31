@@ -58,7 +58,9 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("getCommand",this,ARG_STRING,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("getXLabel",this,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("getYLabel",this,ARG_OUTPUT+ARG_STRING),
-			ExtensionDescriptor.newDescriptor("selectTable",this,ARG_OUTPUT+ARG_STRING)
+			ExtensionDescriptor.newDescriptor("selectTable",this,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("tableExists",this,ARG_STRING,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("selectImage",this,ARG_OUTPUT+ARG_STRING)
 		};
 
 		Functions.registerExtensions(this);
@@ -85,10 +87,27 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			}
 			return null;
 		}
+		if(name.equals("selectImage")){
+			ImagePlus[] imp=jutils.selectImages(false,1);
+			if(imp!=null && imp.length>0){
+				((String[])args[0])[0]=imp[0].getTitle();
+			}
+			return null;
+		}
 		if(name.equals("selectTable")){
 			TextWindow[] tw=jutils.selectTables(false,1);
 			if(tw!=null && tw.length>0){
 				((String[])args[0])[0]=tw[0].getTitle();
+			}
+			return null;
+		}
+		if(name.equals("tableExists")){
+			String title=(String)args[0];
+			TextWindow tw=jutils.selectTable(title);
+			if(tw!=null){
+				((String[])args[1])[0]="true";
+			} else {
+				((String[])args[1])[0]="false";
 			}
 			return null;
 		}
