@@ -24,18 +24,26 @@ public class traj_pearson_spatial_cc_jru_v1 implements PlugIn {
 		float psize=xvals2[0][1]-xvals2[0][0];
 		int length=yvals[0].length;
 		crosscorr cc=new crosscorr(length,false);
-		float[][] temp=cc.docrosscorrnofft(yvals[0],yvals[1],false);
-		float stdev1=jstatistics.getstatistic("StDev",yvals[0],null);
-		float stdev2=jstatistics.getstatistic("StDev",yvals[1],null);
-		float[] ics=new float[length];
-		float[] xvals=new float[length];
-		for(int i=0;i<length;i++){
-			int position=i+length/2;
-			if(position>=length) position-=length;
-			ics[i]=temp[0][position]*temp[1][0]*temp[1][1]/(stdev1*stdev2);
-			xvals[i]=psize*(float)(i-length/2);
+		int npairs=yvals.length/2;
+		float[][] tics=new float[npairs][];
+		float[][] txvals=new float[npairs][];
+		for(int j=0;j<npairs;j++){
+			float[][] temp=cc.docrosscorrnofft(yvals[j*2],yvals[j*2+1],false);
+			float stdev1=jstatistics.getstatistic("StDev",yvals[j*2],null);
+			float stdev2=jstatistics.getstatistic("StDev",yvals[j*2+1],null);
+			float[] ics=new float[length];
+			float[] xvals=new float[length];
+			for(int i=0;i<length;i++){
+				int position=i+length/2;
+				if(position>=length) position-=length;
+				ics[i]=temp[0][position]*temp[1][0]*temp[1][1]/(stdev1*stdev2);
+				xvals[i]=psize*(float)(i-length/2);
+			}
+			tics[j]=ics;
+			txvals[j]=xvals;
 		}
-		new PlotWindow4("Spatial Correlation","shift","Pearson",xvals,ics).draw();
+		if(npairs==1) new PlotWindow4("Spatial Correlation","shift","Pearson",txvals[0],tics[0]).draw();
+		else new PlotWindow4("Spatial Correlation","shift","Pearson",txvals,tics,null).draw();
 	}
 
 }

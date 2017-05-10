@@ -42,6 +42,7 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		gd.addNumericField("Other_channel",3,0);
 		gd.addCheckbox("rolling_ball_sub?",false);
 		gd.addNumericField("rolling_ball_radius",50,0);
+		gd.addCheckbox("border_back_sub?",false);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		debug=gd.getNextBoolean();
 		threshmult=(float)gd.getNextNumber();
@@ -55,6 +56,7 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 		int othch=(int)gd.getNextNumber()-1;
 		boolean rollsub=gd.getNextBoolean();
 		int rollballrad=(int)gd.getNextNumber();
+		boolean bordsub=gd.getNextBoolean();
 		ImagePlus imp=WindowManager.getCurrentImage();
 		int width=imp.getWidth(); int height=imp.getHeight();
 		int channels=imp.getNChannels();
@@ -162,6 +164,17 @@ public class spb_partition_analysis_jru_v2 implements PlugIn {
 			centroids[i][1]=(float)Math.round(centroids[i][1]);
 			Rectangle rect=new Rectangle((int)(centroids[i][0]-spbsize),(int)(centroids[i][1]-spbsize),2*spbsize+1,2*spbsize+1);
 			spbintensities[i]=jstatistics.getstatistic("Sum",sumnpcproj,width,height,rect,null);
+			//might want to subtract the average border intensity from the sbp
+			if(bordsub){
+				int spbsize2=(int)jstatistics.getstatistic("Count",sumnpcproj,width,height,rect,null);
+				Rectangle plusborder=new Rectangle((int)(centroids[i][0]-spbsize-1),(int)(centroids[i][1]-spbsize-1),2*spbsize+3,2*spbsize+3);
+				float border=jstatistics.getstatistic("Sum",sumnpcproj,width,height,plusborder,null);
+				border-=spbintensities[i];
+				int bordercount=(int)jstatistics.getstatistic("Count",sumnpcproj,width,height,plusborder,null);
+				bordercount-=spbsize2;
+				float borderavg=border/(float)bordercount;
+				spbintensities[i]-=borderavg*(float)spbsize2;
+			}
 			if(third) spbintensitiesoth[i]=jstatistics.getstatistic("Sum",sumothproj,width,height,rect,null);
 			spbintensitiesspb[i]=jstatistics.getstatistic("Sum",sumspbproj,width,height,rect,null);
 			rman.addRoi(new PointRoi((int)centroids[i][0],(int)centroids[i][1]));
