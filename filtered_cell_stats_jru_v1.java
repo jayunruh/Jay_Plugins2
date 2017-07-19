@@ -30,11 +30,13 @@ public class filtered_cell_stats_jru_v1 implements PlugIn {
 		String[] stats=jstatistics.stats;
 		gd.addChoice("Statistic?",stats,stats[0]);
 		gd.addStringField("String for Empty Cells","NaN");
+		gd.addCheckbox("Add_Cell_Count_Column",false);
 		gd.showDialog();
 		if(gd.wasCanceled()){return;}
 		int index=gd.getNextChoiceIndex();
 		int statindex=gd.getNextChoiceIndex();
 		String emptystring=gd.getNextString();
+		boolean cellctcol=gd.getNextBoolean();
 		String stat=stats[statindex];
 		if(niframes[index] instanceof TextWindow){
 			TextWindow tw=(TextWindow)niframes[index];
@@ -59,7 +61,7 @@ public class filtered_cell_stats_jru_v1 implements PlugIn {
 				filtered=listtable;
 			}
 			//new TextWindow("Filtered Table",tp.getColumnHeadings(),table_tools.print_listtable(filtered),400,200);
-			List<List<String>> stattable=table_tools.get_cell_stat_list(filtered,cellnameindex,stat);
+			List<List<String>> stattable=table_tools.get_cell_stat_list(filtered,cellnameindex,stat,cellctcol);
 			//now we need to find the cells that were completely filtered and return NaN for those
 			//both tables are already sorted
 			if(filters!=null){
@@ -74,6 +76,7 @@ public class filtered_cell_stats_jru_v1 implements PlugIn {
 							if(j==cellnameindex) temp.add(cellname);
 							else temp.add(emptystring);
 						}
+						if(cellctcol) temp.add("0");
 						extralist.add(temp);
 						//stattable.add(temp);
 					}
@@ -81,7 +84,9 @@ public class filtered_cell_stats_jru_v1 implements PlugIn {
 				for(int i=0;i<extralist.size();i++) stattable.add(extralist.get(i));
 				table_tools.sort_listtable(stattable,cellnameindex);
 			}
-			TextWindow tw2=new TextWindow("Table Data Stats",tp.getColumnHeadings(),table_tools.print_listtable(stattable),400,200);	
+			String newcollabels=tp.getColumnHeadings();
+			if(cellctcol) newcollabels+="\tcellct";
+			TextWindow tw2=new TextWindow("Table Data Stats",newcollabels,table_tools.print_listtable(stattable),400,200);	
 		} else {
 			IJ.showMessage("wrong window type");
 		}
