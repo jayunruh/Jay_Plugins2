@@ -17,6 +17,7 @@ import ij.plugin.*;
 import jalgs.*;
 import jguis.*;
 import ij.text.*;
+import java.util.*;
 
 
 public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
@@ -60,7 +61,10 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("getYLabel",this,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("selectTable",this,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("tableExists",this,ARG_STRING,ARG_OUTPUT+ARG_STRING),
-			ExtensionDescriptor.newDescriptor("selectImage",this,ARG_OUTPUT+ARG_STRING)
+			ExtensionDescriptor.newDescriptor("setTableValue",this,ARG_STRING,ARG_NUMBER,ARG_NUMBER,ARG_STRING),
+			ExtensionDescriptor.newDescriptor("getTableValue",this,ARG_STRING,ARG_NUMBER,ARG_NUMBER,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("selectImage",this,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("testArray",this,ARG_ARRAY)
 		};
 
 		Functions.registerExtensions(this);
@@ -108,6 +112,47 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 				((String[])args[1])[0]="true";
 			} else {
 				((String[])args[1])[0]="false";
+			}
+			return null;
+		}
+		if(name.equals("setTableValue")){
+			String title=(String)args[0];
+			int row=((Double)args[1]).intValue();
+			int col=((Double)args[2]).intValue();
+			TextWindow tw=jutils.selectTable(title);
+			String val=(String)args[3];
+			if(tw!=null){
+				TextPanel tp=tw.getTextPanel();
+				List<List<String>> listtable=table_tools.table2listtable(tp);
+				List<String> row2=listtable.get(row);
+				row2.set(col,val);
+				table_tools.replace_table(tp,listtable,tp.getColumnHeadings());
+			}
+			return null;
+		}
+		if(name.equals("getTableValue")){
+			String title=(String)args[0];
+			int row=((Double)args[1]).intValue();
+			int col=((Double)args[2]).intValue();
+			TextWindow tw=jutils.selectTable(title);
+			if(tw!=null){
+				TextPanel tp=tw.getTextPanel();
+				String line=tp.getLine(row);
+				String[] temp=table_tools.split_string_tab(line);
+				((Double[])args[3])[0]=new Double(temp[col]);
+			}
+			return null;
+		}
+		if(name.equals("testArray")){
+			for(int i=0;i<args.length;i++){
+				if(args[i] instanceof String) IJ.log("args"+i+"="+(String)args[i]);
+				if(args[i] instanceof Object[]){
+					Object[] tempargs=(Object[])args[i];
+					for(int j=0;j<tempargs.length;j++){ //these are either strings or doubles
+						IJ.log("args"+i+","+j+"="+tempargs[j].toString());
+						IJ.log("args"+i+","+j+" type "+tempargs[j].getClass().getName());
+					}
+				}
 			}
 			return null;
 		}
@@ -269,7 +314,7 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 		if(name.equals("setBinSize")){
 			float binsize=((Double)args[0]).floatValue();
 			Object plot=jutils.runReflectionMethod(iw,"getPlot",null);
-			if(iw.getClass().getName().equals("jguis.PlotWindow2DHist")) jutils.runReflectionMethod(plot,"setBinSize",new Object[]{binsize});
+			if(iw.getClass().getName().equals("jguis.PlotWindow2DHist")) jutils.runReflectionMethod(plot,"setBinSize",new Object[]{(int)binsize});
 			else jutils.runReflectionMethod(plot,"setBinSizeUnits",new Object[]{binsize});
 		}
 		if(name.equals("getSelected")){

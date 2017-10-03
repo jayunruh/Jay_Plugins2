@@ -24,7 +24,15 @@ public class import_table_jru_v1 implements PlugIn {
 		String directory=od.getDirectory();
 		String name=od.getFileName();
 		if(name==null || name.equals("")) return;*/
-		File[] filearray=(new jdataio()).openfiles(OpenDialog.getDefaultDirectory(),IJ.getInstance());
+		String args2=Macro.getOptions();
+		File[] filearray=null;
+		if(args2!=null && args2.length()>0){
+			if(args2.indexOf("open=")>=0){
+				filearray=new File[1];
+				filearray[0]=new File(Macro.getValue(args2,"open",""));
+			}
+		}
+		if(filearray==null) filearray=(new jdataio()).openfiles(OpenDialog.getDefaultDirectory(),IJ.getInstance());
 		if(filearray.length==0) return;
 		GenericDialog gd=new GenericDialog("Options");
 		gd.addCheckbox("Has_Column_Labels",true);

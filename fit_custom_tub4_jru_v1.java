@@ -37,11 +37,15 @@ public class fit_custom_tub4_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 		gd.addNumericField("X_Stdev",0.95,5,15,null);
 		gd.addNumericField("Z_Stdev",1.2,5,15,null);
 		gd.addCheckbox("Calibrate?",true);
+		gd.addCheckbox("Hide Realigned",false);
+		gd.addNumericField("XZ_Width (pix)",10,0);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		zratio=(float)gd.getNextNumber();
 		float startstdev=(float)gd.getNextNumber();
 		float startzstdev=(float)gd.getNextNumber();
 		boolean cal=gd.getNextBoolean();
+		boolean hidereal=gd.getNextBoolean();
+		int xzwidth=(int)gd.getNextNumber();
 		float psize=(float)jutils.get_psize(imp);
 		RoiManager rman=RoiManager.getInstance();
 		if(rman==null){
@@ -80,7 +84,7 @@ public class fit_custom_tub4_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 		float[] zprof2=new float[zpts];
 		float[] zreg1=new float[3*zpts];
 		float[] zreg2=new float[3*zpts];
-		int xzwidth=10;
+		//int xzwidth=10;
 		float[] temp=profiler.get2DLineProfile(new float[]{x1,y1,x2,y2},fstack[0],1,0,xzwidth,xpts,ypts);
 		for(int i=0;i<temp.length;i++) temp[i]*=(float)xzwidth;
 		zprof1[0]=temp[newc1-1]; zprof1[0]+=temp[newc1]; zprof1[0]+=temp[newc1+1];
@@ -210,34 +214,41 @@ public class fit_custom_tub4_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 		int dotpos=rename.lastIndexOf(".");
 		if(dotpos>=0) rename=rename.substring(0,dotpos);
 		rename=rename+"_realigned.tif";
-		new ImagePlus(rename,new FloatProcessor(realignwidth,realignlength,realigned,null)).show();
+		if(!hidereal) new ImagePlus(rename,new FloatProcessor(realignwidth,realignlength,realigned,null)).show();
 		Traj3D t3D=new Traj3D("x","y","z",tempxvals,tempyvals,tempzvals);
 		new PlotWindow3D("MultiGaus Plot",t3D).draw();
 
 		double[] calparams=params.clone();
-		calparams[2]*=(double)psize;
-		calparams[3]*=(double)psize;
-		calparams[4]*=(double)psize;
-		calparams[5]*=(double)psize;
-		calparams[7]*=(double)psize;
-		calparams[8]*=(double)psize;
-		calparams[9]*=(double)psize;
-		calparams[10]*=(double)psize;
-		fxc1*=(double)psize; fyc1*=(double)psize;
-		fxc2*=(double)psize; fyc2*=(double)psize;
-		double perpstdev1=params1[2]*(double)psize;
-		double perpstdev2=params2[2]*(double)psize;
+		double perpstdev1=params1[2];
+		double perpstdev2=params2[2];
+		//note that the z parameters are already in xy pixel units
+		if(cal){
+			calparams[2]*=(double)psize;
+			calparams[3]*=(double)psize;
+			calparams[4]*=(double)psize;
+			calparams[5]*=(double)psize;
+			calparams[7]*=(double)psize;
+			calparams[8]*=(double)psize;
+			calparams[9]*=(double)psize;
+			calparams[10]*=(double)psize;
+			fxc1*=(double)psize; fyc1*=(double)psize;
+			fxc2*=(double)psize; fyc2*=(double)psize;
+			perpstdev1*=(double)psize;
+			perpstdev2*=(double)psize;
+		}
+		//we already integrated the ampliudes over the perpendicular axis, need to integrate over the parallel axis and the z axis
+		double int1=params[1]*params[4]*params[5]*2.0*Math.PI/zratio;
+		double int2=params[6]*params[9]*params[10]*2.0*Math.PI/zratio;
 
 		//params are 0baseline,1amp1,2xc1,3zc1,4xystdev1,5zstdev1,6amp2,...
-		String[] paramsnames={"base","amp1","xc1","yc1","zc1","parstdev1","zstdev1","perpstdev1","amp2","xc2","yc2","zc2","parstdev2","zstdev2","perpstdev2"};
+		String[] paramsnames={"base","amp1","xc1","yc1","zc1","parstdev1","zstdev1","perpstdev1","amp2","xc2","yc2","zc2","parstdev2","zstdev2","perpstdev2","int1","int2"};
 		TextWindow outtable=jutils.selectTable("Tub4 Fits");
 		if(outtable==null) outtable=FitDialog_v2.make_outtable("Tub4 Fits",paramsnames);
 		StringBuffer sb=new StringBuffer();
 		sb.append(imp.getTitle()+"\t"+(float)stats[1]+"\t"+(int)stats[0]+"\t"+calparams[0]+"\t");
 		sb.append(""+(float)calparams[1]+"\t"+(float)fxc1+"\t"+(float)fyc1+"\t"+(float)calparams[3]+"\t"+(float)calparams[4]+"\t"+(float)calparams[5]+"\t"+(float)perpstdev1+"\t");
-		sb.append(""+(float)calparams[6]+"\t"+(float)fxc2+"\t"+(float)fyc2+"\t"+(float)calparams[8]+"\t"+(float)calparams[9]+"\t"+(float)calparams[10]+"\t"+(float)perpstdev2);
+		sb.append(""+(float)calparams[6]+"\t"+(float)fxc2+"\t"+(float)fyc2+"\t"+(float)calparams[8]+"\t"+(float)calparams[9]+"\t"+(float)calparams[10]+"\t"+(float)perpstdev2+"\t"+(float)int1+"\t"+int2);
 		outtable.append(sb.toString());
-
 	}
 
 	public float[][][] getZProfiles(double[] params,float[][] fstack,float[][] fit){
