@@ -58,10 +58,11 @@ public class fit_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2{
 		iterations=(int)stats[0];
 		float[] err=null;
 		if(errs){
-			monte_carlo_errors_v2 mcerrs=new monte_carlo_errors_v2(this,0.0001,10,false,0.1);
+			/*monte_carlo_errors_v2 mcerrs=new monte_carlo_errors_v2(this,0.0001,10,false,0.1);
 			double[][] temp=mcerrs.geterrors(params,fixes,null,yvals[0],null,1000);
 			err=new float[temp.length];
-			for(int i=0;i<err.length;i++) err[i]=jstatistics.getstatistic("StDev",temp[i],null);
+			for(int i=0;i<err.length;i++) err[i]=jstatistics.getstatistic("StDev",temp[i],null);*/
+			//need to get the constraints and then run the 1D fit plugin multiple times
 		}
 		
 		TextWindow outtable=jutils.selectTable("Gauss Fits");

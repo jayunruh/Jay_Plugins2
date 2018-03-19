@@ -39,6 +39,7 @@ public class filtered_cell_stats_jru_v2 implements PlugIn {
 		String emptystring=gd.getNextString();
 		boolean cellctcol=gd.getNextBoolean();
 		String stat=stats[statindex];
+		float[] statoptions=jutils.getStatsOptions(stat);
 		if(niframes[index] instanceof TextWindow){
 			TextWindow tw=(TextWindow)niframes[index];
 			TextPanel tp=tw.getTextPanel();
@@ -62,7 +63,7 @@ public class filtered_cell_stats_jru_v2 implements PlugIn {
 				filtered=listtable;
 			}
 			//new TextWindow("Filtered Table",tp.getColumnHeadings(),table_tools.print_listtable(filtered),400,200);
-			List<List<String>> stattable=table_tools.get_cell_stat_list(filtered,cellnameindex,stat,cellctcol);
+			List<List<String>> stattable=table_tools.get_cell_stat_list(filtered,cellnameindex,stat,cellctcol,statoptions);
 			//now we need to find the cells that were completely filtered and return NaN for those
 			//both tables are already sorted
 			if(filters!=null){

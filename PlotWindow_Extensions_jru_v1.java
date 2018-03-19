@@ -42,15 +42,19 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("deleteSelected",this),
 			ExtensionDescriptor.newDescriptor("autoscaleX",this),
 			ExtensionDescriptor.newDescriptor("autoscaleY",this),
+			ExtensionDescriptor.newDescriptor("autoscaleZ",this),
 			ExtensionDescriptor.newDescriptor("scaleROI",this),
 			ExtensionDescriptor.newDescriptor("setMagnification",this,ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("setMagRatio",this,ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelNpts",this,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelIndexXYVals",this,ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER),
+			ExtensionDescriptor.newDescriptor("getSelIndexXYZVals",this,ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelStat",this,ARG_STRING,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("addXYSeries",this,ARG_ARRAY,ARG_ARRAY),
 			ExtensionDescriptor.newDescriptor("updateSelSeries",this,ARG_ARRAY,ARG_ARRAY),
+			ExtensionDescriptor.newDescriptor("plot2List",this),
 			ExtensionDescriptor.newDescriptor("createPlot",this,ARG_STRING,ARG_STRING,ARG_ARRAY,ARG_ARRAY),
+			ExtensionDescriptor.newDescriptor("create3DTraj",this,ARG_ARRAY,ARG_ARRAY,ARG_ARRAY),
 			ExtensionDescriptor.newDescriptor("convertToPW4",this),
 			ExtensionDescriptor.newDescriptor("convertToPW",this),
 			ExtensionDescriptor.newDescriptor("setBinSize",this,MacroExtension.ARG_NUMBER),
@@ -63,6 +67,8 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("tableExists",this,ARG_STRING,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("setTableValue",this,ARG_STRING,ARG_NUMBER,ARG_NUMBER,ARG_STRING),
 			ExtensionDescriptor.newDescriptor("getTableValue",this,ARG_STRING,ARG_NUMBER,ARG_NUMBER,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("getTableHeadings",this,ARG_STRING,ARG_OUTPUT+ARG_STRING),
+			ExtensionDescriptor.newDescriptor("getTableSize",this,ARG_STRING,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("selectImage",this,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("testArray",this,ARG_ARRAY)
 		};
@@ -89,6 +95,20 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			} else {
 				new PlotWindow4("Macro PlotWindow4",xlabel,ylabel,yvals2).draw();
 			}
+			return null;
+		}
+		if(name.equals("create3DTraj")){
+			Object[] xvals=(Object[])args[0];
+			Object[] yvals=(Object[])args[1];
+			Object[] zvals=(Object[])args[2];
+			float[] xvals2=new float[xvals.length];
+			for(int i=0;i<xvals.length;i++) xvals2[i]=((Double)xvals[i]).floatValue();
+			float[] yvals2=new float[yvals.length];
+			for(int i=0;i<yvals.length;i++) yvals2[i]=((Double)yvals[i]).floatValue();
+			float[] zvals2=new float[zvals.length];
+			for(int i=0;i<zvals.length;i++) zvals2[i]=((Double)zvals[i]).floatValue();
+			Traj3D t3d=new Traj3D("x","y","z",xvals2,yvals2,zvals2);
+			new PlotWindow3D("Macro 3D Trajectory",t3d).draw();
 			return null;
 		}
 		if(name.equals("selectImage")){
@@ -139,7 +159,28 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 				TextPanel tp=tw.getTextPanel();
 				String line=tp.getLine(row);
 				String[] temp=table_tools.split_string_tab(line);
-				((Double[])args[3])[0]=new Double(temp[col]);
+				//((Double[])args[3])[0]=new Double(temp[col]);
+				((String[])args[3])[0]=temp[col];
+			}
+			return null;
+		}
+		if(name.equals("getTableHeadings")){
+			String title=(String)args[0];
+			TextWindow tw=jutils.selectTable(title);
+			if(tw!=null){
+				TextPanel tp=tw.getTextPanel();
+				String headings=tp.getColumnHeadings();
+				((String[])args[1])[0]=headings;
+			}
+			return null;
+		}
+		if(name.equals("getTableSize")){
+			String title=(String)args[0];
+			TextWindow tw=jutils.selectTable(title);
+			if(tw!=null){
+				TextPanel tp=tw.getTextPanel();
+				int nlines=tp.getLineCount();
+				((Double[])args[1])[0]=new Double(nlines);
 			}
 			return null;
 		}
@@ -167,6 +208,11 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 		}
 		if(name.equals("convertToPW")){
 			jutils.pw42pw(iw);
+			return null;
+		}
+		if(name.equals("plot2List")){
+			//list the plot data in a table
+			jutils.runPW4VoidMethod(iw,"showList");
 			return null;
 		}
 		if(name.equals("getNSeries")){
@@ -236,6 +282,11 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			Object plot=jutils.runPW4VoidMethod(iw,"getPlot");
 			jutils.runReflectionMethod(plot,"yautoscale",null);
 		}
+		if(name.equals("autoscaleZ")){
+			Object plot=jutils.runPW4VoidMethod(iw,"getPlot");
+			if(plot instanceof Plot2DHist) jutils.runReflectionMethod(plot,"intautoscale",null);
+			else jutils.runReflectionMethod(plot,"zautoscale",null);
+		}
 		if(name.equals("scaleROI")){
 			jutils.runPW4VoidMethod(iw,"scaleroi");
 		}
@@ -269,6 +320,29 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			} else {
 				((Double[])args[1])[0]=new Double(xvals[sel][index]);
 				((Double[])args[2])[0]=new Double(yvals[sel][index]);
+			}
+		}
+		if(name.equals("getSelIndexXYZVals")){
+			//assume this is a trajectory (not a surface)
+			float[][] yvals=(float[][])jutils.runPW4VoidMethod(iw,"getYValues");
+			float[][] xvals=(float[][])jutils.runPW4VoidMethod(iw,"getXValues");
+			float[][] zvals=null;
+			if(jutils.is3DPlot(iw)) zvals=((float[][][])jutils.runPW4VoidMethod(iw,"getZValues"))[0];
+			int sel=(Integer)jutils.runPW4VoidMethod(iw,"getSelected");
+			if(sel<0) sel=0;
+			int index=((Double)args[0]).intValue();
+			int[] npts=null;
+			if(jutils.is3DPlot(iw)) npts=((int[][])jutils.runPW4VoidMethod(iw,"getNpts"))[0];
+			else npts=(int[])jutils.runPW4VoidMethod(iw,"getNpts");
+			((Double[])args[3])[0]=new Double(0.0);
+			if(index<0 || index>=npts[sel]){
+				((Double[])args[1])[0]=new Double(0.0);
+				((Double[])args[2])[0]=new Double(0.0);
+				//((Double[])args[3])[0]=new Double(0.0);
+			} else {
+				((Double[])args[1])[0]=new Double(xvals[sel][index]);
+				((Double[])args[2])[0]=new Double(yvals[sel][index]);
+				if(zvals!=null) ((Double[])args[3])[0]=new Double(zvals[sel][index]);
 			}
 		}
 		if(name.equals("getSelStat")){
