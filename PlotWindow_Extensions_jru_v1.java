@@ -69,6 +69,7 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("getTableValue",this,ARG_STRING,ARG_NUMBER,ARG_NUMBER,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("getTableHeadings",this,ARG_STRING,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("getTableSize",this,ARG_STRING,ARG_OUTPUT+ARG_NUMBER),
+			ExtensionDescriptor.newDescriptor("getLastLog",this,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("selectImage",this,ARG_OUTPUT+ARG_STRING),
 			ExtensionDescriptor.newDescriptor("testArray",this,ARG_ARRAY)
 		};
@@ -151,6 +152,7 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			return null;
 		}
 		if(name.equals("getTableValue")){
+			//parameters are tabname,row,col,outvar
 			String title=(String)args[0];
 			int row=((Double)args[1]).intValue();
 			int col=((Double)args[2]).intValue();
@@ -161,6 +163,15 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 				String[] temp=table_tools.split_string_tab(line);
 				//((Double[])args[3])[0]=new Double(temp[col]);
 				((String[])args[3])[0]=temp[col];
+			}
+			return null;
+		}
+		if(name.equals("getLastLog")){
+			//this gets the last line in the log window
+			String log=IJ.getLog();
+			if(log!=null){
+				String[] lines=log.split("\n");
+				((String[])args[0])[0]=lines[lines.length-1];
 			}
 			return null;
 		}
