@@ -25,6 +25,7 @@ public class set_imaris_spot_traj_jru_v1 implements PlugIn {
 		boolean pixunits=gd.getNextBoolean();
 		float rad=(float)gd.getNextNumber();
 		int sel=(Integer)jutils.runPW4VoidMethod(iw[0],"getSelected");
+		if(sel<0) sel=0;
 		int[] npts=((int[][])jutils.runPW4VoidMethod(iw[0],"getNpts"))[0];
 		float[] x,y,z;
 		if(npts[sel]==1){
