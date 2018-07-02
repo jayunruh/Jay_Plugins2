@@ -252,6 +252,7 @@ public class fit_custom_tub4_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 	}
 
 	public float[][][] getZProfiles(double[] params,float[][] fstack,float[][] fit){
+		//this is never used
 		float[][] yvals=new float[2*ngaus][];
 		float[][] xvals=new float[2*ngaus][];
 		for(int i=0;i<ngaus;i++){
