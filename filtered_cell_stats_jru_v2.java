@@ -49,7 +49,7 @@ public class filtered_cell_stats_jru_v2 implements PlugIn {
 			gd2.addChoice("Cell Name Column",col_labels,col_labels[0]);
 			gd2.showDialog(); if(gd2.wasCanceled()){return;}
 			int cellnameindex=(int)gd2.getNextChoiceIndex();
-			float[][] filters=get_filters(col_labels,cellnameindex);
+			float[][] filters=get_filters(col_labels,cellnameindex,0);
 			List<List<String>> listtable=table_tools.table2listtable(tp);
 			table_tools.sort_listtable(listtable,cellnameindex);
 			//new TextWindow("Sorted Table",tp.getColumnHeadings(),table_tools.print_listtable(listtable),400,200);
@@ -94,15 +94,27 @@ public class filtered_cell_stats_jru_v2 implements PlugIn {
 		}
 	}
 
-	public float[][] get_filters(String[] col_labels,int cellnameindex){
+	public float[][] get_filters(String[] col_labels,int cellnameindex,int recursion){
 		GenericDialog gd=new GenericDialog("Select Filter");
-		gd.addCheckbox("Use Filter?",false);
-		String[] labels2=table_tools.make_labels_unique(col_labels);
-		labels2[cellnameindex]="null";
-		gd.addChoice("Filter Parameter",labels2,labels2[0]);
-		String[] filters={"<","=",">"};
-		gd.addChoice("Filter_Type",filters,filters[0]);
-		gd.addNumericField("Filter_Value",0.0,5,15,null);
+		if(recursion==0){
+			gd.addCheckbox("Use Filter?",false);
+			String[] labels2=table_tools.make_labels_unique(col_labels);
+			labels2[cellnameindex]="null";
+			gd.addChoice("Filter Parameter",labels2,labels2[0]);
+			String[] filters={"<","=",">"};
+			gd.addChoice("Filter_Type",filters,filters[0]);
+			gd.addNumericField("Filter_Value",0.0,5,15,null);
+			gd.addCheckbox("Add_Another Filter?",false);
+		} else {
+			gd.addCheckbox("Use"+recursion+" Filter?",false);
+			String[] labels2=table_tools.make_labels_unique(col_labels);
+			labels2[cellnameindex]="null";
+			gd.addChoice("Filter"+recursion+" Parameter",labels2,labels2[0]);
+			String[] filters={"<","=",">"};
+			gd.addChoice("Filter_Type"+recursion,filters,filters[0]);
+			gd.addNumericField("Filter_Value"+recursion,0.0,5,15,null);
+			gd.addCheckbox("Add_Another"+recursion+" Filter?",false);
+		}
 		gd.showDialog(); if(gd.wasCanceled()){return null;}
 		if(!gd.getNextBoolean()) return null;
 		int colindex=gd.getNextChoiceIndex();
@@ -111,7 +123,19 @@ public class filtered_cell_stats_jru_v2 implements PlugIn {
 		outvals[0][0]=colindex;
 		outvals[0][1]=gd.getNextChoiceIndex();
 		outvals[0][2]=(float)gd.getNextNumber();
+		boolean add_another=gd.getNextBoolean();
+		if(add_another && recursion<6){
+			float[][] temp=get_filters(col_labels,cellnameindex,recursion+1);
+			outvals=appendFilters(outvals,temp);
+		}
 		return outvals;
+	}
+
+	public float[][] appendFilters(float[][] filters1,float[][] filters2){
+		float[][] temp=new float[filters1.length+filters2.length][];
+		for(int i=0;i<filters1.length;i++) temp[i]=filters1[i];
+		for(int i=0;i<filters2.length;i++) temp[i+filters1.length]=filters2[i];
+		return temp;
 	}
 
 }

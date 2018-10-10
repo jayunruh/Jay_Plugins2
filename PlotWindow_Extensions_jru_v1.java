@@ -312,7 +312,10 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			jutils.runReflectionMethod(plot,"setmagratio",new Object[]{magratio});
 		}
 		if(name.equals("getSelNpts")){
-			int[] npts=(int[])jutils.runPW4VoidMethod(iw,"getNpts");
+			Object npts1=jutils.runPW4VoidMethod(iw,"getNpts");
+			int[] npts=null;
+			if(npts1 instanceof int[]) npts=(int[])npts1;
+			else npts=((int[][])npts1)[0];
 			int sel=(Integer)jutils.runPW4VoidMethod(iw,"getSelected");
 			if(sel<0) sel=0;
 			int selnpts=npts[sel];
