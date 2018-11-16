@@ -3,12 +3,14 @@ import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import ij.process.*;
 import jguis.*;
+import jalgs.*;
+import ij.text.*;
 
 public class StackRegJ_ implements PlugIn{
 	//this plugin is a highly modified version of the StackReg plugin available from http://bigwww.epfl.ch/thevenaz/stackreg/
 	//this version will align a hyperstack based on a selected slice and channel
 	//the alignment outputs a translation trajectory for further alignments
-	int slices,channels,frames,targetFrame,targetChannel,targetSlice;
+	int slices,channels,frames,targetFrame,targetChannel,targetSlice,slices2,channels2,frames2;
 
 	public void run (final String arg) {
 		final ImagePlus imp = WindowManager.getCurrentImage();
@@ -21,10 +23,14 @@ public class StackRegJ_ implements PlugIn{
 		};
 		gd.addChoice("Transformation:", transformationItem, "Rigid Body");
 		gd.addCheckbox("Output_Trans_Trajectory",true);
+		gd.addCheckbox("Output_Transformations",false);
+		gd.addCheckbox("Align_Secondary_Image",false);
 		gd.showDialog();
 		if (gd.wasCanceled()) {return;}
 		final int transformation = gd.getNextChoiceIndex();
 		boolean outtrans=gd.getNextBoolean();
+		boolean outtrans2=gd.getNextBoolean();
+		boolean secondary=gd.getNextBoolean();
 		final int width = imp.getWidth();
 		final int height = imp.getHeight();
 		slices=imp.getNSlices();
@@ -33,11 +39,38 @@ public class StackRegJ_ implements PlugIn{
 		targetFrame = imp.getFrame();
 		targetChannel = imp.getChannel();
 		targetSlice=imp.getSlice();
+		ImagePlus simp=null;
+		if(secondary){
+			ImagePlus[] images=jutils.selectImages(false,1,new String[]{"Secondary_Image"});
+			if(images!=null){
+				simp=images[0];
+				slices2=simp.getNSlices();
+				channels2=simp.getNChannels();
+				frames2=simp.getNFrames();
+			}
+		}
 		if(frames==1){
-			frames=slices;
-			slices=1;
-			targetFrame=targetSlice;
-			targetSlice=1;
+			//try to align the slices
+			if(slices>1){
+				frames=slices;
+				slices=1;
+				targetFrame=targetSlice;
+				targetSlice=1;
+				frames2=slices2;
+				slices2=1;
+			} else {
+				//try to align the channels
+				frames=channels;
+				channels=1;
+				targetFrame=targetChannel;
+				targetChannel=1;
+				frames2=channels2;
+				channels2=1;
+			}
+		}
+		if(secondary && (frames2!=frames)){
+			IJ.showMessage("Number of frames in images doesn't match, ignoring secondary");
+			simp=null;
 		}
 		double[][] globalTransform = {
 			{1.0, 0.0, 0.0},
@@ -95,12 +128,15 @@ public class StackRegJ_ implements PlugIn{
 			}
 		}
 		ImagePlus target = new ImagePlus("StackRegTarget",getImpProcessor(imp,targetChannel,targetSlice,targetFrame));
-		float[][] trans=new float[2][frames];
+		float[][] trans=new float[3][frames];
+		double[][][] transforms=new double[frames][][];
 		//target.show();
 		for (int f = (targetFrame - 1); f>0; f--) {
-			if(!registerSlice(target, imp, width, height,transformation, globalTransform, anchorPoints, f)) return;
+			if(!registerSlice(target, imp, width, height,transformation, globalTransform, anchorPoints, f,simp)) return;
+			//globalTransform contains the actual transformation
+			transforms[f-1]=algutils.clone_multidim_array(globalTransform);
 			float[] trans2=get_translation(globalTransform,width,height);
-			trans[0][f-1]=trans2[0]; trans[1][f-1]=trans2[1];
+			trans[0][f-1]=trans2[0]; trans[1][f-1]=trans2[1]; trans[2][f-1]=trans2[2];
 			IJ.showStatus("Frame "+f+" Registered");
 		}
 		if ((1 < targetFrame) && (targetFrame < frames)) {
@@ -115,29 +151,69 @@ public class StackRegJ_ implements PlugIn{
 			globalTransform[2][2] = 1.0;
 			target.getProcessor().copyBits(getImpProcessor(imp,targetChannel,targetSlice,targetFrame), 0, 0, Blitter.COPY);
 		}
+		transforms[targetFrame-1]=algutils.clone_multidim_array(globalTransform);
 		for (int f=(targetFrame+1); f<=frames; f++) {
-			if(!registerSlice(target, imp, width, height,transformation, globalTransform, anchorPoints, f)) return;
+			if(!registerSlice(target, imp, width, height,transformation, globalTransform, anchorPoints, f,simp)) return;
+			transforms[f-1]=algutils.clone_multidim_array(globalTransform);
 			float[] trans2=get_translation(globalTransform,width,height);
-			trans[0][f-1]=trans2[0]; trans[1][f-1]=trans2[1];
+			trans[0][f-1]=trans2[0]; trans[1][f-1]=trans2[1]; trans[2][f-1]=trans2[2];
 			IJ.showStatus("Frame "+f+" Registered");
 		}
-		if(outtrans) new PlotWindow4("Translation Trajectory","x","y",trans[0],trans[1]).draw();
+		if(outtrans){
+			new PlotWindow4("Translation Trajectory","x","y",trans[0],trans[1]).draw();
+			new PlotWindow4("Angle Trajectory","frame","angle (radians)",trans[2]).draw();
+		}
+		if(outtrans2){
+			//now output the transformation matrices (linearized) to a table
+			String titles="frame\t(0,0)\t(0,1)\t(0,2)\t(1,0)\t(1,1)\t(1,2)\t(2,0)\t(2,1)\t(2,2)";
+			TextWindow tw=new TextWindow("Global Transformations",titles,"",400,200);
+			for(int i=0;i<frames;i++){
+				String linear=table_tools.print_double_array(transforms[i][0])+"\t"+table_tools.print_double_array(transforms[i][1])+"\t"+table_tools.print_double_array(transforms[i][2]);
+				tw.append(""+(i+1)+"\t"+linear);
+			}
+		}
 		imp.updateAndDraw();
 	}
 
 	private float[] get_translation(double[][] globalTransform,int width,int height){
+		//here we get the translation from the globalTransform
+		//anchor points are at the center of the image
 		double[][] anchorPoints = new double[1][3];
 		anchorPoints[0][0] =0.5*(double)width;
 		anchorPoints[0][1] =0.5*(double)height;
 		anchorPoints[0][2] = 1.0;
+		//source points will hold the transformation of the anchor points
 		double[][] sourcePoints = new double[1][3];
+		//matrix multiplication
 		for (int i = 0; (i < 3); i++) {
 			sourcePoints[0][i] = 0.0;
 			for (int j = 0; (j < 3); j++) {
 				sourcePoints[0][i] += globalTransform[i][j]* anchorPoints[0][j];
 			}
 		}
-		return new float[]{(float)(sourcePoints[0][0]-anchorPoints[0][0]),(float)(sourcePoints[0][1]-anchorPoints[0][1])};
+		//the translation is the difference between source and anchor points
+		float[] trans={(float)(sourcePoints[0][0]-anchorPoints[0][0]),(float)(sourcePoints[0][1]-anchorPoints[0][1]),0.0f};
+		//transform another set of anchor points to get the rotation
+		double[][] anchorPoints2 = new double[1][3];
+		anchorPoints2[0][0] =0.5*(double)width+1.0f;
+		anchorPoints2[0][1] =0.5*(double)height;
+		anchorPoints2[0][2] = 1.0;
+		double[][] sourcePoints2=new double[1][3];
+		//matrix multiplication
+		for (int i = 0; (i < 3); i++) {
+			sourcePoints2[0][i] = 0.0;
+			for (int j = 0; (j < 3); j++) {
+				sourcePoints2[0][i] += globalTransform[i][j]* anchorPoints2[0][j];
+			}
+		}
+		//calculate the normalized vector between sourcepoints2 and sourcepoints
+		float xvec=(float)(sourcePoints2[0][0]-sourcePoints[0][0]);
+		float yvec=(float)(sourcePoints2[0][1]-sourcePoints[0][1]);
+		float len=(float)Math.sqrt(xvec*xvec+yvec*yvec);
+		float angle=(float)Math.atan2(yvec/len,xvec/len);
+		trans[2]=angle;
+		//return the difference between the source (transformed) and anchor points
+		return trans;
 	}
 
 	private double[][] getTransformationMatrix (final double[][] fromCoord,final double[][] toCoord,final int transformation) {
@@ -355,7 +431,7 @@ public class StackRegJ_ implements PlugIn{
 
 	/*------------------------------------------------------------------*/
 	private boolean registerSlice (final ImagePlus target,final ImagePlus imp,final int width,final int height,
-			final int transformation,final double[][] globalTransform,final double[][] anchorPoints,final int f) {
+			final int transformation,final double[][] globalTransform,final double[][] anchorPoints,final int f,final ImagePlus simp) {
 		//imp.setSlice(s);
 		//setHyperstackSlice(imp,targetChannel,targetSlice,f);
 		double[][] sourcePoints = null;
@@ -435,6 +511,19 @@ public class StackRegJ_ implements PlugIn{
 						setImpProcessor(imp,transformed,j,i,f);
 					}
 				}
+				if(simp!=null){
+					for(int i=1;i<=slices2;i++){
+						for(int j=1;j<=channels2;j++){
+							trj=gettrj();
+							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]}});
+							trj.setTargetPoints(new double[][]{{width/2,height/2}});
+							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.TRANSLATION);
+							if(transformed==null) return false;
+							setImpProcessor(simp,transformed,j,i,f);
+						}
+					}
+				}
 				break;
 			}
 			case 1: {
@@ -461,6 +550,19 @@ public class StackRegJ_ implements PlugIn{
 						setImpProcessor(imp,transformed,j,i,f);
 					}
 				}
+				if(simp!=null){
+					for(int i=1;i<=slices2;i++){
+						for(int j=1;j<=channels2;j++){
+							trj=gettrj();
+							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]},{sourcePoints[1][0],sourcePoints[1][1]},{sourcePoints[2][0],sourcePoints[2][1]}});
+							trj.setTargetPoints(new double[][]{{width/2,height/2},{width/2,height/4},{width/2,3*height/4}});
+							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.RIGID_BODY);
+							if(transformed==null) return false;
+							setImpProcessor(simp,transformed,j,i,f);
+						}
+					}
+				}
 				break;
 			}
 			case 2: {
@@ -482,6 +584,19 @@ public class StackRegJ_ implements PlugIn{
 						ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.SCALED_ROTATION);
 						if(transformed==null) return false;
 						setImpProcessor(imp,transformed,j,i,f);
+					}
+				}
+				if(simp!=null){
+					for(int i=1;i<=slices2;i++){
+						for(int j=1;j<=channels2;j++){
+							trj=gettrj();
+							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]},{sourcePoints[1][0],sourcePoints[1][1]}});
+							trj.setTargetPoints(new double[][]{{width/4,height/2},{3*width/4,height/2}});
+							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.SCALED_ROTATION);
+							if(transformed==null) return false;
+							setImpProcessor(simp,transformed,j,i,f);
+						}
 					}
 				}
 				break;
@@ -507,6 +622,19 @@ public class StackRegJ_ implements PlugIn{
 						ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.AFFINE);
 						if(transformed==null) return false;
 						setImpProcessor(imp,transformed,j,i,f);
+					}
+				}
+				if(simp!=null){
+					for(int i=1;i<=slices2;i++){
+						for(int j=1;j<=channels2;j++){
+							trj=gettrj();
+							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]},{sourcePoints[1][0],sourcePoints[1][1]},{sourcePoints[2][0],sourcePoints[2][1]}});
+							trj.setTargetPoints(new double[][]{{width/2,height/4},{width/4,3*height/4},{3*width/4,3*height/4}});
+							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.AFFINE);
+							if(transformed==null) return false;
+							setImpProcessor(simp,transformed,j,i,f);
+						}
 					}
 				}
 				break;
