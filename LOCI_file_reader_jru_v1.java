@@ -26,9 +26,15 @@ public class LOCI_file_reader_jru_v1 implements PlugIn {
 		GenericDialog gd2=new GenericDialog("Options");
 		gd2.addCheckbox("Avoid_Metadata",false);
 		gd2.addCheckbox("Simple_Import",false);
+		gd2.addCheckbox("Large_Image_Canvas (lower resolution)",false);
+		gd2.addNumericField("Max_Display_Pixels (for large canvas)",1024,0);
+		gd2.addCheckbox("Dynamic_Resolution (for large canvas)",false);
 		gd2.showDialog(); if(gd2.wasCanceled()){return;}
 		boolean nometa=gd2.getNextBoolean();
 		boolean simple=gd2.getNextBoolean();
+		boolean large=gd2.getNextBoolean();
+		int maxpix=(int)gd2.getNextNumber();
+		boolean dynamicscale=gd2.getNextBoolean();
 		LOCI_file_reader lfr=new LOCI_file_reader();
 		lfr.nometa=nometa;
 		GenericDialog gd=new GenericDialog("Options");
@@ -61,7 +67,14 @@ public class LOCI_file_reader_jru_v1 implements PlugIn {
 		if(!simple) imp=lfr.get_loci_subimp(directory,fname,outmeta,series,zproj,projstat,refchan,lims);
 		else imp=lfr.get_loci_imp_simple(directory,fname,series);
 		//ImagePlus imp=(new LOCI_file_reader()).get_loci_imp(directory,fname,outmeta,series);
-		imp.show();
+		if(!large){
+			imp.show();
+		} else {
+			largeImageCanvas canvas=new largeImageCanvas(imp);
+			canvas.maxpixels=maxpix;
+			canvas.dynamicscale=dynamicscale;
+			ImageWindow win=new StackWindow(imp,canvas);
+		}
 		IJ.log(""+lims[0]+" , "+lims[1]+" , "+lims[2]+" , "+lims[3]+" , "+lims[4]+" , "+lims[5]);
 	}
 
