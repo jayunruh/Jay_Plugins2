@@ -22,14 +22,17 @@ public class interactive_3D_viewer_jru_v1 implements PlugIn {
 		gd.addNumericField("Z_Ratio",zsize/psize,5,15,null);
 		gd.addNumericField("Threshold",5.0f,5,15,null);
 		gd.addNumericField("#_of_threads",1,0);
+		gd.addNumericField("Timeout (sec)",5,0);
 		gd.addCheckbox("Use_OpenCL",false);
 		gd.showDialog(); if(gd.wasCanceled()){return;}
 		float zratio=(float)gd.getNextNumber();
 		float thresh=(float)gd.getNextNumber();
 		int nthreads=(int)gd.getNextNumber();
+		int timeout=(int)gd.getNextNumber();
 		boolean opencl=gd.getNextBoolean();
 		if(!opencl){
 			maxproj3D_panel_v2 mpp=new maxproj3D_panel_v2();
+			if(timeout!=5) mpp.timeout=(long)timeout;
 			mpp.init(imp,zratio,thresh,nthreads);
 			maxproj3D_panel_v2.launch_frame(mpp);
 		} else {

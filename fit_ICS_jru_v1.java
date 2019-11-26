@@ -9,11 +9,13 @@ import ij.*;
 import ij.process.*;
 import ij.gui.*;
 import java.awt.*;
-import ij.plugin.filter.*;
+import ij.plugin.*;
+//import ij.plugin.filter.*;
 import jalgs.*;
 import jalgs.jfit.*;
+import jguis.*;
 
-public class fit_ICS_jru_v1 implements PlugInFilter, NLLSfitinterface {
+public class fit_ICS_jru_v1 implements PlugIn, NLLSfitinterface_v2 {
 	ImagePlus imp;
 	double[] params;
 	int[] fixes;
@@ -22,31 +24,31 @@ public class fit_ICS_jru_v1 implements PlugInFilter, NLLSfitinterface {
 	double pi = 3.14159265;
 	int xc,yc,xpts,ypts,maxiter;
 	float g0val;
+	NLLSfit_v2 fitclass;
 
-	public int setup(String arg, ImagePlus imp) {
+	/*public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
 		return DOES_ALL;
-	}
+	}*/
 
-	public void run(ImageProcessor ip) {
+	//public void run(ImageProcessor ip) {
+	public void run(String arg) {
+		ImagePlus imp=WindowManager.getCurrentImage();
+		ImageProcessor ip=imp.getProcessor();
 		float[] pixels = (float[])ip.getPixels();
 		int fullwidth = imp.getWidth();
 		int fullheight = imp.getHeight();
-		ImagePlus imp2 = new ImagePlus();
-		imp2.setTitle("Residuals");
-		ImagePlus imp3 = new ImagePlus();
-		imp3.setTitle("Fit");
-		ImagePlus imp4 = new ImagePlus();
-		imp4.setTitle("Autocorr");
-		
+
 		//initialize the variables
 		xc=fullwidth/2; yc=fullheight/2; xpts=16; ypts=16; g0skip=true; maxiter=10; c2test=false;
 		GenericDialog gd2=new GenericDialog("Options");
+		gd2.addCheckbox("Skip_G0",true);
 		gd2.addNumericField("X center",xc,0);
 		gd2.addNumericField("Y center",yc,0);
 		gd2.addNumericField("Pts in x to fit",xpts,0);
 		gd2.addNumericField("Pts in y to fit",ypts,0);
 		gd2.showDialog(); if(gd2.wasCanceled()){return;}
+		g0skip=gd2.getNextBoolean();
 		xc=(int)gd2.getNextNumber();
 		yc=(int)gd2.getNextNumber();
 		xpts=(int)gd2.getNextNumber();
@@ -65,8 +67,26 @@ public class fit_ICS_jru_v1 implements PlugInFilter, NLLSfitinterface {
 		}
 		g0val=ac[0];
 
+		ImagePlus[] imps=new ImagePlus[3];
+		imps[0] = new ImagePlus("Autocorr",new FloatProcessor(xpts,ypts,ac,null));
+		imps[0].show();
+		Rectangle r0=imps[0].getWindow().getBounds();
+		imps[1] = new ImagePlus("Fit",new FloatProcessor(xpts,ypts,new float[xpts*ypts],null));
+		imps[1].show();
+		Rectangle r1=imps[1].getWindow().getBounds();
+		imps[1].getWindow().setBounds(r0.x,r0.y+r0.height,r1.width,r1.height);
+		imps[1].updateAndDraw();
+		imps[2] = new ImagePlus("Residuals",new FloatProcessor(xpts,ypts,new float[xpts*ypts],null));
+		imps[2].show();
+		Rectangle r2=imps[2].getWindow().getBounds();
+		imps[2].getWindow().setBounds(r0.x,r0.y+2*r0.height,r2.width,r2.height);
+		imps[2].updateAndDraw();
 
-		while (showDialog())
+		String[] paramnames={"Basline","G0_1","StDev_Particle1","G0_2","StDev_Particle2"};
+		FitDialog_image fd=new FitDialog_image(imps,this,paramnames);
+		fd.run_fit(params,null,constraints,fixes);
+
+		/*while (showDialog())
 		{
 			NLLSfit nf;
 			if(c2test){
@@ -86,10 +106,10 @@ public class fit_ICS_jru_v1 implements PlugInFilter, NLLSfitinterface {
 			if(imp3.getWindow()==null){imp3.show();}
 			imp4.setProcessor(null,new FloatProcessor(xpts,ypts,ac,null));
 			if(imp4.getWindow()==null){imp4.show();}
-		}
+		}*/
 	}
 
-	private boolean showDialog()
+	/*private boolean showDialog()
 	{
 		GenericDialog gd = new GenericDialog("Fitting Parameters");
 		gd.addCheckbox("Skip G(0)?",g0skip);
@@ -146,9 +166,9 @@ public class fit_ICS_jru_v1 implements PlugInFilter, NLLSfitinterface {
 		params[4] = gd.getNextNumber();
 		fixes[4]=gd.getNextBoolean() ? 1 : 0;
 		return true;
-	}
+	}*/
 	
-	public double fitfunc(double[] params,int indvar)
+	/*public double fitfunc(double[] params,int indvar)
 	{
 		//the params list is baseline,g01,stdev1,g02,stdev2
 		if(indvar==0 && g0skip){return g0val;}
@@ -165,6 +185,27 @@ public class fit_ICS_jru_v1 implements PlugInFilter, NLLSfitinterface {
 			dumdouble1 *= params[3];
 			return dumdouble1+dumdouble+params[0];
 		}
+	}*/
+
+	public double[] fitfunc(double[] params){
+		//the params list is baseline,g01,stdev1,g02,stdev2
+		double[] func=new double[xpts*ypts];
+		if(g0skip){func[0]=g0val;}
+		for(int i=0;i<ypts;i++){
+			for(int j=0;j<xpts;j++){
+				if(j==0 && i==0 && g0skip) continue;
+				double dumdouble,dumdouble1;
+				dumdouble1 = Math.exp(((-0.25)*(double)(j*j))/(params[2]*params[2]));
+				dumdouble1 *= Math.exp(((-0.25)*(double)(i*i))/(params[2]*params[2]));
+				dumdouble1 *= params[1];
+				dumdouble=dumdouble1;
+				dumdouble1 = Math.exp(((-0.25)*(double)(j*j))/(params[4]*params[4]));
+				dumdouble1 *= Math.exp(((-0.25)*(double)(i*i))/(params[4]*params[4]));
+				dumdouble1 *= params[3];
+				func[j+i*xpts]=dumdouble1+dumdouble+params[0];
+			}
+		}
+		return func;
 	}
 
 	public void showresults(String results){
