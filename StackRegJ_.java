@@ -405,9 +405,38 @@ public class StackRegJ_ implements PlugIn{
 		return imp.getStack().getProcessor(index).convertToFloat();
 	}
 
+	public ImageProcessor getSImpProcessor(final ImagePlus imp,int channel,int slice,int frame){
+		int index=(channel-1)+(slice-1)*channels2+(frame-1)*slices2*channels2+1;
+		return imp.getStack().getProcessor(index).convertToFloat();
+	}
+
 	public void setImpProcessor(final ImagePlus imp,ImagePlus source,int channel,int slice,int frame){
 		source.getStack().deleteLastSlice();
 		int index=(channel-1)+(slice-1)*channels+(frame-1)*slices*channels+1;
+		switch(imp.getType()){
+			case ImagePlus.GRAY8: {
+				source.getProcessor().setMinAndMax(0.0,255.0);
+				imp.getStack().setPixels(source.getProcessor().convertToByte(false).getPixels(),index);
+				break;
+			}
+			case ImagePlus.GRAY16: {
+				source.getProcessor().setMinAndMax(0.0,65535.0);
+				imp.getStack().setPixels(source.getProcessor().convertToShort(false).getPixels(),index);
+				break;
+			}
+			case ImagePlus.GRAY32: {
+				imp.getStack().setPixels(source.getProcessor().getPixels(),index);
+				break;
+			}
+			default: {
+				IJ.error("Unexpected image type");
+			}
+		}
+	}
+
+	public void setSImpProcessor(final ImagePlus imp,ImagePlus source,int channel,int slice,int frame){
+		source.getStack().deleteLastSlice();
+		int index=(channel-1)+(slice-1)*channels2+(frame-1)*slices2*channels2+1;
 		switch(imp.getType()){
 			case ImagePlus.GRAY8: {
 				source.getProcessor().setMinAndMax(0.0,255.0);
@@ -517,10 +546,10 @@ public class StackRegJ_ implements PlugIn{
 							trj=gettrj();
 							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]}});
 							trj.setTargetPoints(new double[][]{{width/2,height/2}});
-							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus source2=new ImagePlus("StackRegSource",getSImpProcessor(simp,j,i,f));
 							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.TRANSLATION);
 							if(transformed==null) return false;
-							setImpProcessor(simp,transformed,j,i,f);
+							setSImpProcessor(simp,transformed,j,i,f);
 						}
 					}
 				}
@@ -556,10 +585,10 @@ public class StackRegJ_ implements PlugIn{
 							trj=gettrj();
 							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]},{sourcePoints[1][0],sourcePoints[1][1]},{sourcePoints[2][0],sourcePoints[2][1]}});
 							trj.setTargetPoints(new double[][]{{width/2,height/2},{width/2,height/4},{width/2,3*height/4}});
-							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus source2=new ImagePlus("StackRegSource",getSImpProcessor(simp,j,i,f));
 							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.RIGID_BODY);
 							if(transformed==null) return false;
-							setImpProcessor(simp,transformed,j,i,f);
+							setSImpProcessor(simp,transformed,j,i,f);
 						}
 					}
 				}
@@ -592,10 +621,10 @@ public class StackRegJ_ implements PlugIn{
 							trj=gettrj();
 							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]},{sourcePoints[1][0],sourcePoints[1][1]}});
 							trj.setTargetPoints(new double[][]{{width/4,height/2},{3*width/4,height/2}});
-							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus source2=new ImagePlus("StackRegSource",getSImpProcessor(simp,j,i,f));
 							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.SCALED_ROTATION);
 							if(transformed==null) return false;
-							setImpProcessor(simp,transformed,j,i,f);
+							setSImpProcessor(simp,transformed,j,i,f);
 						}
 					}
 				}
@@ -630,10 +659,10 @@ public class StackRegJ_ implements PlugIn{
 							trj=gettrj();
 							trj.setSourcePoints(new double[][]{{sourcePoints[0][0],sourcePoints[0][1]},{sourcePoints[1][0],sourcePoints[1][1]},{sourcePoints[2][0],sourcePoints[2][1]}});
 							trj.setTargetPoints(new double[][]{{width/2,height/4},{width/4,3*height/4},{3*width/4,3*height/4}});
-							ImagePlus source2=new ImagePlus("StackRegSource",getImpProcessor(simp,j,i,f));
+							ImagePlus source2=new ImagePlus("StackRegSource",getSImpProcessor(simp,j,i,f));
 							ImagePlus transformed=trj.transformImage(source2,width,height,TurboRegJ_.AFFINE);
 							if(transformed==null) return false;
-							setImpProcessor(simp,transformed,j,i,f);
+							setSImpProcessor(simp,transformed,j,i,f);
 						}
 					}
 				}
