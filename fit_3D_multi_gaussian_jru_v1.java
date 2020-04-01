@@ -55,6 +55,7 @@ public class fit_3D_multi_gaussian_jru_v1 implements PlugIn, NLLSfitinterface_v2
 		Object[] stack2=jutils.get3DZSeries(stack,currc,currt,nframes,zpts,nchans);
 		float[][] fstack=algutils.get_region2(stack2,0,0,xpts,ypts,xpts,ypts);
 		ngaus=rois.length;
+		//IJ.log(""+ngaus)
 		double[] params=new double[ngaus*6+1];
 		double[][] constraints=new double[2][ngaus*6+1];
 		params[0]=get3DMinMax(fstack)[0]; //this is the baseline
