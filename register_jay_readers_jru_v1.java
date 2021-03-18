@@ -11,16 +11,17 @@ import ij.gui.*;
 import java.awt.*;
 import ij.plugin.*;
 import loci.formats.*;
+import jguis.*;
 
 public class register_jay_readers_jru_v1 implements PlugIn {
 
 	public void run(String arg) {
 		try{
-			Class jayreader=Class.forName("loci_pw_reader_jru_v1");
+			Class jayreader=Class.forName("jguis.loci_pw_reader_jru_v1");
 			ImageReader.getDefaultReaderClasses().addClass(jayreader);
 			//Class jayreader2=Class.forName("loci_sky_reader_jru_v1");
 			//ImageReader.getDefaultReaderClasses().addClass(jayreader2);
-			Class jayreader3=Class.forName("loci_kiss_reader_jru_v1");
+			Class jayreader3=Class.forName("jguis.loci_kiss_reader_jru_v1");
 			ImageReader.getDefaultReaderClasses().addClass(jayreader3);
 		} catch(ClassNotFoundException e){
 			//if the reader isn't intalled, don't bother

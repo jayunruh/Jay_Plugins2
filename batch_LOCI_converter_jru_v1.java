@@ -116,6 +116,9 @@ public class batch_LOCI_converter_jru_v1 implements PlugIn {
 						imp2.setLuts(luts);
 						imp2.copyScale(imp);
 						FileSaver fs=new FileSaver(imp2);
+						String outname=names[i];
+						outname=outname.replace("/","_");
+						outname=outname.replace("\\","_");
 						fs.saveAsTiffStack(outdir+names[i]+".tif");
 						imp2.close();
 						IJ.showStatus(names[i]+" exported");

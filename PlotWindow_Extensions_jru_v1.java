@@ -50,6 +50,7 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			ExtensionDescriptor.newDescriptor("getSelIndexXYVals",this,ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelIndexXYZVals",this,ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("getSelStat",this,ARG_STRING,ARG_OUTPUT+ARG_NUMBER),
+			ExtensionDescriptor.newDescriptor("getSelStat2",this,ARG_STRING,ARG_NUMBER,ARG_OUTPUT+ARG_NUMBER),
 			ExtensionDescriptor.newDescriptor("addXYSeries",this,ARG_ARRAY,ARG_ARRAY),
 			ExtensionDescriptor.newDescriptor("updateSelSeries",this,ARG_ARRAY,ARG_ARRAY),
 			ExtensionDescriptor.newDescriptor("plot2List",this),
@@ -360,15 +361,43 @@ public class PlotWindow_Extensions_jru_v1 implements PlugIn, MacroExtension {
 			}
 		}
 		if(name.equals("getSelStat")){
-			float[][] yvals=(float[][])jutils.runPW4VoidMethod(iw,"getYValues");
-			int sel=(Integer)jutils.runPW4VoidMethod(iw,"getSelected");
-			if(sel<0) sel=0;
+			float[][] yvals=null;
+			int sel=0;
+			int[] npts=null;
+			if(jutils.isPlotHist(iw)){
+				yvals=(float[][])jutils.runPW4VoidMethod(iw,"getXValues");
+				npts=new int[]{yvals[0].length};
+			} else {
+				yvals=(float[][])jutils.runPW4VoidMethod(iw,"getYValues");
+				npts=(int[])jutils.runPW4VoidMethod(iw,"getNpts");
+				sel=(Integer)jutils.runPW4VoidMethod(iw,"getSelected");
+				if(sel<0) sel=0;
+			}
 			String stat=(String)args[0];
-			int[] npts=(int[])jutils.runPW4VoidMethod(iw,"getNpts");
 			float[] temp=new float[npts[sel]];
 			System.arraycopy(yvals[sel],0,temp,0,npts[sel]);
 			float stat2=jstatistics.getstatistic(stat,temp,null);
 			((Double[])args[1])[0]=new Double(stat2);
+		}
+		if(name.equals("getSelStat2")){
+			float[][] yvals=null;
+			int sel=0;
+			int[] npts=null;
+			if(jutils.isPlotHist(iw)){
+				yvals=(float[][])jutils.runPW4VoidMethod(iw,"getXValues");
+				npts=new int[]{yvals[0].length};
+			} else {
+				yvals=(float[][])jutils.runPW4VoidMethod(iw,"getYValues");
+				npts=(int[])jutils.runPW4VoidMethod(iw,"getNpts");
+				sel=(Integer)jutils.runPW4VoidMethod(iw,"getSelected");
+				if(sel<0) sel=0;
+			}
+			String stat=(String)args[0];
+			float extra=((Double)args[1]).floatValue();
+			float[] temp=new float[npts[sel]];
+			System.arraycopy(yvals[sel],0,temp,0,npts[sel]);
+			float stat2=jstatistics.getstatistic(stat,temp,new float[]{extra});
+			((Double[])args[2])[0]=new Double(stat2);
 		}
 		if(name.equals("addXYSeries")){
 			Object[] xvals=(Object[])args[0];
